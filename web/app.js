@@ -228,9 +228,9 @@ function updateNowTracker(now) {
   const futureVal = getTideHeightAtHour(checkFrac);
   
   if (futureVal > currentTideHeight) {
-    elements.tideStatusText.textContent = 'RISING TIDE';
+    elements.tideStatusText.innerHTML = 'RISING TIDE <span class="tide-arrow">↑</span>';
   } else {
-    elements.tideStatusText.textContent = 'FALLING TIDE';
+    elements.tideStatusText.innerHTML = 'FALLING TIDE <span class="tide-arrow">↓</span>';
   }
 }
 
