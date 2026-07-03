@@ -38,6 +38,7 @@ const elements = {
   waveFillPath: document.getElementById('wave-fill-path'),
   waveStrokePath: document.getElementById('wave-stroke-path'),
   nowMarkerLine: document.getElementById('now-marker-line'),
+  nowMarkerGlow: document.getElementById('now-marker-glow'),
   nowMarkerDot: document.getElementById('now-marker-dot'),
   tideOverlayLabels: document.getElementById('tide-overlay-labels'),
   
@@ -120,6 +121,7 @@ function applyThemeClass() {
   
   glowStroke.setAttribute('stroke', colorHex);
   elements.nowMarkerDot.setAttribute('stroke', colorHex);
+  elements.nowMarkerGlow.setAttribute('fill', colorHex);
   
   fillGradStop1.setAttribute('stop-color', colorHex);
   fillGradStop2.setAttribute('stop-color', colorHex);
@@ -216,9 +218,11 @@ function updateNowTracker(now) {
   // Map this value to SVG Y Coordinate
   const yNow = getSvgYCoordinate(currentTideHeight);
   
-  // Move vertical line & dot in SVG
+  // Move vertical line, glow ring, & dot in SVG
   elements.nowMarkerLine.setAttribute('x1', xNow);
   elements.nowMarkerLine.setAttribute('x2', xNow);
+  elements.nowMarkerGlow.setAttribute('cx', xNow);
+  elements.nowMarkerGlow.setAttribute('cy', yNow);
   elements.nowMarkerDot.setAttribute('cx', xNow);
   elements.nowMarkerDot.setAttribute('cy', yNow);
   

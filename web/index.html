@@ -60,15 +60,6 @@
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            
-            <!-- Glow Filter for active hour dot -->
-            <filter id="dot-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="8" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
           </defs>
 
           <!-- Filled Wave Area -->
@@ -80,8 +71,9 @@
           <!-- Vertical Dashed Hour Marker (NOW) -->
           <line id="now-marker-line" x1="0" y1="0" x2="0" y2="400" stroke="#475569" stroke-dasharray="6,6" stroke-width="1.5" />
           
-          <!-- Active Time Dot Intersection -->
-          <circle id="now-marker-dot" cx="0" cy="0" r="8" fill="#ffffff" stroke="#06b6d4" stroke-width="4" filter="url(#dot-glow)" />
+          <!-- Active Time Dot Intersection (Dual-circle glow to avoid filter rendering bugs) -->
+          <circle id="now-marker-glow" cx="0" cy="0" r="18" fill="#06b6d4" opacity="0.25" />
+          <circle id="now-marker-dot" cx="0" cy="0" r="6" fill="#ffffff" stroke="#06b6d4" stroke-width="2.5" />
         </svg>
 
         <!-- HTML Overlay for High/Low tide callouts (dynamically positioned by app.js) -->
