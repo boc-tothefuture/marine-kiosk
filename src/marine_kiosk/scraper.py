@@ -67,6 +67,25 @@ def fetch_tide_data(station_id, units, datum):
             "value": round(val, 3)
         })
 
+    # Fetch water temperature (latest reading)
+    water_temp = None
+    try:
+        temp_begin = (now - datetime.timedelta(days=1)).strftime("%Y%m%d")
+        temp_end = now.strftime("%Y%m%d")
+        df_temp = station.get_data(
+            begin_date=temp_begin,
+            end_date=temp_end,
+            product="water_temperature",
+            units=units,
+            time_zone="lst_ldt"
+        )
+        if not df_temp.empty:
+            valid_temps = df_temp["v"].dropna()
+            if not valid_temps.empty:
+                water_temp = round(float(valid_temps.iloc[-1]), 1)
+    except Exception as e:
+        print(f"Scraper: Warning: failed to fetch water temperature: {e}")
+
     output_data = {
         "station_id": station_id,
         "station_name": station_name,
@@ -74,6 +93,7 @@ def fetch_tide_data(station_id, units, datum):
         "units": units,
         "datum": datum,
         "timezone": station.metadata.get("timezone", "LST"),
+        "water_temp": water_temp,
         "tide_heights": tide_heights,
         "last_updated": now.isoformat()
     }

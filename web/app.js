@@ -7,6 +7,7 @@ const state = {
   units: 'english',
   datum: 'MLLW',
   lastUpdated: null,
+  waterTemp: null,
   connectionOnline: true,
   
   // User Preferences (saved in localStorage)
@@ -27,6 +28,8 @@ const elements = {
   currentTideUnit: document.getElementById('current-tide-unit'),
   tideStatusText: document.getElementById('tide-status-text'),
   pulseDot: document.getElementById('status-pulse-dot'),
+  waterTempContainer: document.getElementById('water-temp-container'),
+  waterTempVal: document.getElementById('water-temp-val'),
   datumInfo: document.getElementById('datum-info'),
   lastUpdatedText: document.getElementById('last-updated-text'),
   
@@ -291,6 +294,7 @@ function generateSimulatedTide() {
   state.datum = 'MLLW';
   state.dateStr = now.toISOString().split('T')[0];
   state.tideHeights = heights;
+  state.waterTemp = 59.5;
   state.lastUpdated = now.toISOString();
   state.connectionOnline = false;
 }
@@ -316,6 +320,7 @@ async function loadData() {
     state.tideHeights = data.tide_heights;
     state.units = data.units || 'english';
     state.datum = data.datum || 'MLLW';
+    state.waterTemp = data.water_temp;
     state.lastUpdated = data.last_updated;
     state.connectionOnline = true;
     
@@ -343,6 +348,14 @@ function updateUI() {
     elements.pulseDot.title = state.settings.source === 'sim' ? 'Simulated Offline Demo' : 'Connection Offline (Simulated)';
   }
   
+  if (state.waterTemp !== undefined && state.waterTemp !== null) {
+    const tempUnit = state.units === 'english' ? '°F' : '°C';
+    elements.waterTempVal.textContent = `${state.waterTemp.toFixed(1)}${tempUnit}`;
+    elements.waterTempContainer.style.display = 'flex';
+  } else {
+    elements.waterTempContainer.style.display = 'none';
+  }
+
   if (state.lastUpdated) {
     const updatedDate = new Date(state.lastUpdated);
     const timeStr = updatedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
