@@ -1,0 +1,17 @@
+[project]
+name = "marine-kiosk"
+version = "0.1.0"
+description = "A glanceable digital marine kiosk dashboard for TVs"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "noaa-coops>=0.3.1",
+    "pandas>=2.0.0",
+]
+
+[project.scripts]
+marine-kiosk = "marine_kiosk.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

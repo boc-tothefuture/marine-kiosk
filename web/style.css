@@ -1,0 +1,400 @@
+/* Reset & Core Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #020408;
+  color: #f1f5f9;
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Fullscreen Display Container */
+#app-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, #0f1626 0%, #020408 100%);
+  padding: 5vh 5vw; /* Generous padding for high-end feel and overscan safety */
+}
+
+#clock-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+/* Theme Configuration Variables */
+#clock-container.theme-ocean {
+  --tide-color-on: #22d3ee; /* Glowing Cyan */
+  --tide-glow-large: rgba(6, 182, 212, 0.35);
+  --time-color-on: #10b981; /* Emerald Green */
+  --time-glow: rgba(16, 185, 129, 0.8);
+  --status-color: #10b981;
+  --accent-color: #22d3ee;
+}
+
+#clock-container.theme-cyber {
+  --tide-color-on: #f472b6; /* Cyberpunk Pink */
+  --tide-glow-large: rgba(236, 72, 153, 0.35);
+  --time-color-on: #f59e0b; /* Amber Yellow */
+  --time-glow: rgba(245, 158, 11, 0.8);
+  --status-color: #f59e0b;
+  --accent-color: #f472b6;
+}
+
+#clock-container.theme-mono {
+  --tide-color-on: #f1f5f9; /* Matte White */
+  --tide-glow-large: rgba(241, 245, 249, 0.15);
+  --time-color-on: #f43f5e; /* Rose Red */
+  --time-glow: rgba(244, 63, 94, 0.8);
+  --status-color: #f43f5e;
+  --accent-color: #94a3b8;
+}
+
+#clock-container.theme-amber {
+  --tide-color-on: #ffb300; /* Warm Amber */
+  --tide-glow-large: rgba(255, 179, 0, 0.35);
+  --time-color-on: #e53935; /* Retro Red */
+  --time-glow: rgba(229, 57, 53, 0.8);
+  --status-color: #e53935;
+  --accent-color: #ffb300;
+}
+
+/* Header Section (Top) */
+#dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+}
+
+#digital-time {
+  font-size: 6.5rem;
+  font-weight: 200;
+  letter-spacing: -3px;
+  color: #ffffff;
+  line-height: 0.95;
+}
+
+#digital-time span {
+  font-size: 2.2rem;
+  font-weight: 300;
+  color: #64748b;
+  margin-left: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+#digital-date {
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: #64748b;
+  margin-top: 10px;
+  letter-spacing: 0.5px;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+#current-tide-readout {
+  display: flex;
+  align-items: baseline;
+  color: var(--tide-color-on);
+  text-shadow: 0 0 35px var(--tide-glow-large);
+  font-weight: 600;
+  line-height: 0.9;
+}
+
+#current-tide-val {
+  font-size: 8rem;
+  letter-spacing: -2px;
+}
+
+#current-tide-unit {
+  font-size: 2.6rem;
+  font-weight: 300;
+  color: #64748b;
+  margin-left: 8px;
+}
+
+#tide-status-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+#tide-status-text {
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: 3px;
+  color: #94a3b8;
+}
+
+/* Status Pulse Dot */
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--status-color);
+  box-shadow: 0 0 10px var(--status-color);
+  animation: pulse-ring 2s infinite ease-in-out;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  50% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Plotting Graphic Area (Middle) */
+#wave-plot-container {
+  flex-grow: 1;
+  width: 100%;
+  margin: 5vh 0;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+#tide-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible; /* Let stroke glow filter bleed out of bounds */
+}
+
+/* Dynamic High/Low Text Labels overlay */
+#tide-overlay-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.tide-callout {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.tide-callout-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 15px rgba(0,0,0,0.6);
+}
+
+.tide-callout-sub {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+}
+
+/* Footer Section (Bottom) */
+#dashboard-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 18px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.time-tick {
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: #475569;
+  width: 3rem;
+  text-align: center;
+}
+
+#meta-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 25px;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #475569;
+  letter-spacing: 2px;
+}
+
+#station-name {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.meta-sep {
+  color: rgba(255, 255, 255, 0.05);
+}
+
+/* Settings Toggle Cog overlay */
+#settings-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: #334155;
+  cursor: pointer;
+  opacity: 0.15;
+  transition: opacity 0.3s ease, color 0.3s ease;
+  z-index: 10;
+}
+
+#settings-toggle:hover {
+  opacity: 0.9;
+  color: var(--accent-color);
+}
+
+/* Settings Modal UI */
+#settings-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 12, 17, 0.94);
+  backdrop-filter: blur(16px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+
+#settings-panel.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-content {
+  background: #1e293b;
+  padding: 40px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: 90%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+}
+
+.settings-content h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 15px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.settings-group select {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #f1f5f9;
+  padding: 12px;
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.settings-group select:focus {
+  border-color: var(--accent-color);
+}
+
+.settings-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 15px;
+}
+
+.settings-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+#settings-save {
+  background: var(--accent-color);
+  color: #0c0f17;
+}
+
+#settings-save:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 15px var(--tide-glow-large);
+}
+
+#settings-close {
+  background: #334155;
+  color: #94a3b8;
+}
+
+#settings-close:hover {
+  background: #475569;
+  color: #f1f5f9;
+}
