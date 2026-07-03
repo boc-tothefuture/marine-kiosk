@@ -17,7 +17,7 @@ def load_config():
         "station_id": "8418150",
         "units": "english",
         "datum": "MLLW",
-        "port": 8080,
+        "port": 8081,
         "update_interval_hours": 1
     }
     
@@ -57,7 +57,7 @@ def main():
     station_id = config.get("station_id", "8418150")
     units = config.get("units", "english")
     datum = config.get("datum", "MLLW")
-    port = config.get("port", 8080)
+    port = config.get("port", 8081)
     interval_hours = config.get("update_interval_hours", 1)
     
     # Start the scraper loop in a background daemon thread

@@ -44,7 +44,7 @@ If you prefer to run it directly from source:
 uv run python -m marine_kiosk.main
 ```
 
-Once running, open your browser and navigate to: **[http://localhost:8080](http://localhost:8080)**
+Once running, open your browser and navigate to: **[http://localhost:8081](http://localhost:8081)**
 
 ---
 
@@ -57,7 +57,7 @@ You can customize the NOAA station, server port, and update frequency in **`tide
   "station_id": "8418150",
   "units": "english",
   "datum": "MLLW",
-  "port": 8080,
+  "port": 8081,
   "update_interval_hours": 1
 }
 ```

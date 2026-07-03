@@ -2,6 +2,6 @@
   "station_id": "8418150",
   "units": "english",
   "datum": "MLLW",
-  "port": 8080,
+  "port": 8081,
   "update_interval_hours": 1
 }
