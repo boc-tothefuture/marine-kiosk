@@ -42,43 +42,54 @@
 
       <!-- Middle Section: Dynamic SVG Wave Plot Area -->
       <main id="wave-plot-container">
-        <!-- SVG Canvas for drawing paths -->
-        <svg id="tide-svg" viewBox="0 0 1000 400" preserveAspectRatio="none">
-          <!-- Definitions for gradients and filters -->
-          <defs>
-            <!-- Wave Area Fill Gradient -->
-            <linearGradient id="wave-fill-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.3" />
-              <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0" />
-            </linearGradient>
+        <!-- Left Side: Tide Curve Plot -->
+        <div id="wave-plot-left">
+          <!-- SVG Canvas for drawing paths -->
+          <svg id="tide-svg" viewBox="0 0 1000 400" preserveAspectRatio="none">
+            <!-- Definitions for gradients and filters -->
+            <defs>
+              <!-- Wave Area Fill Gradient -->
+              <linearGradient id="wave-fill-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0" />
+              </linearGradient>
+              
+              <!-- Glow Filter for the wave stroke -->
+              <filter id="cyan-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- Filled Wave Area -->
+            <path id="wave-fill-path" d="" fill="url(#wave-fill-grad)" />
             
-            <!-- Glow Filter for the wave stroke -->
-            <filter id="cyan-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="6" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
+            <!-- Neon Glowing Wave Stroke Line -->
+            <path id="wave-stroke-path" d="" fill="none" stroke="#06b6d4" stroke-width="4" filter="url(#cyan-glow)" />
+            
+            <!-- Vertical Dashed Hour Marker (NOW) -->
+            <line id="now-marker-line" x1="0" y1="0" x2="0" y2="400" stroke="#475569" stroke-dasharray="6,6" stroke-width="1.5" />
+            
+            <!-- Active Time Dot Intersection (Dual-circle glow to avoid filter rendering bugs) -->
+            <circle id="now-marker-glow" cx="0" cy="0" r="18" fill="#06b6d4" opacity="0.25" />
+            <circle id="now-marker-dot" cx="0" cy="0" r="6" fill="#ffffff" stroke="#06b6d4" stroke-width="2.5" />
+          </svg>
 
-          <!-- Filled Wave Area -->
-          <path id="wave-fill-path" d="" fill="url(#wave-fill-grad)" />
-          
-          <!-- Neon Glowing Wave Stroke Line -->
-          <path id="wave-stroke-path" d="" fill="none" stroke="#06b6d4" stroke-width="4" filter="url(#cyan-glow)" />
-          
-          <!-- Vertical Dashed Hour Marker (NOW) -->
-          <line id="now-marker-line" x1="0" y1="0" x2="0" y2="400" stroke="#475569" stroke-dasharray="6,6" stroke-width="1.5" />
-          
-          <!-- Active Time Dot Intersection (Dual-circle glow to avoid filter rendering bugs) -->
-          <circle id="now-marker-glow" cx="0" cy="0" r="18" fill="#06b6d4" opacity="0.25" />
-          <circle id="now-marker-dot" cx="0" cy="0" r="6" fill="#ffffff" stroke="#06b6d4" stroke-width="2.5" />
-        </svg>
+          <!-- HTML Overlay for High/Low tide callouts (dynamically positioned by app.js) -->
+          <div id="tide-overlay-labels">
+            <!-- Dynamic High/Low Tide text tags will be appended here -->
+          </div>
+        </div>
 
-        <!-- HTML Overlay for High/Low tide callouts (dynamically positioned by app.js) -->
-        <div id="tide-overlay-labels">
-          <!-- Dynamic High/Low Tide text tags will be appended here -->
+        <!-- Right Side: NWS Coastal Marine Forecast -->
+        <div id="forecast-sidebar">
+          <div class="sidebar-title">Casco Bay Forecast</div>
+          <div id="forecast-list">
+            <!-- Dynamic period forecast cards injected by app.js -->
+          </div>
         </div>
       </main>
 

@@ -8,6 +8,7 @@ const state = {
   datum: 'MLLW',
   lastUpdated: null,
   waterTemp: null,
+  marineForecast: [],
   connectionOnline: true,
   
   // User Preferences (saved in localStorage)
@@ -41,6 +42,8 @@ const elements = {
   nowMarkerGlow: document.getElementById('now-marker-glow'),
   nowMarkerDot: document.getElementById('now-marker-dot'),
   tideOverlayLabels: document.getElementById('tide-overlay-labels'),
+  forecastList: document.getElementById('forecast-list'),
+  forecastSidebar: document.getElementById('forecast-sidebar'),
   
   // Settings Modal
   settingsToggle: document.getElementById('settings-toggle'),
@@ -299,6 +302,12 @@ function generateSimulatedTide() {
   state.dateStr = now.toISOString().split('T')[0];
   state.tideHeights = heights;
   state.waterTemp = 59.5;
+  state.marineForecast = [
+    { name: "THIS AFTERNOON", text: "SW winds around 10 kt. Seas around 2 ft." },
+    { name: "TONIGHT", text: "W winds 5 to 10 kt. Seas around 2 ft." },
+    { name: "SATURDAY", text: "W winds around 5 kt, becoming NW in the afternoon. Seas around 2 ft." },
+    { name: "SATURDAY NIGHT", text: "NW winds 5 to 10 kt. Seas around 2 ft." }
+  ];
   state.lastUpdated = now.toISOString();
   state.connectionOnline = false;
 }
@@ -325,6 +334,7 @@ async function loadData() {
     state.units = data.units || 'english';
     state.datum = data.datum || 'MLLW';
     state.waterTemp = data.water_temp;
+    state.marineForecast = data.marine_forecast || [];
     state.lastUpdated = data.last_updated;
     state.connectionOnline = true;
     
@@ -368,6 +378,31 @@ function updateUI() {
     elements.lastUpdatedText.textContent = 'UPDATED: --';
   }
   
+  // Update NWS Marine Forecast Sidebar
+  elements.forecastList.innerHTML = '';
+  if (state.marineForecast && state.marineForecast.length > 0) {
+    elements.forecastSidebar.style.display = 'flex';
+    state.marineForecast.slice(0, 4).forEach(period => {
+      const card = document.createElement('div');
+      card.className = 'forecast-card';
+      
+      const pName = document.createElement('span');
+      pName.className = 'forecast-period';
+      pName.textContent = period.name;
+      pName.style.color = 'var(--accent-color)';
+      
+      const pText = document.createElement('span');
+      pText.className = 'forecast-text';
+      pText.textContent = period.text;
+      
+      card.appendChild(pName);
+      card.appendChild(pText);
+      elements.forecastList.appendChild(card);
+    });
+  } else {
+    elements.forecastSidebar.style.display = 'none';
+  }
+
   renderWavePlot();
   updateTime(); // Force time update
 }

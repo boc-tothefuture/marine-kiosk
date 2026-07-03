@@ -3,5 +3,7 @@
   "units": "english",
   "datum": "MLLW",
   "port": 8081,
-  "update_interval_hours": 1
+  "update_interval_hours": 1,
+  "nws_office": "GYX",
+  "nws_zone": "ANZ153"
 }

@@ -86,6 +86,64 @@ def fetch_tide_data(station_id, units, datum):
     except Exception as e:
         print(f"Scraper: Warning: failed to fetch water temperature: {e}")
 
+    # Fetch NWS Coastal Waters Forecast for Casco Bay
+    nws_office = "GYX"
+    nws_zone = "ANZ153"
+    try:
+        config_path = os.path.join(root_dir, "tide_config.json")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                cfg = json.load(f)
+                nws_office = cfg.get("nws_office", "GYX")
+                nws_zone = cfg.get("nws_zone", "ANZ153")
+    except Exception as e:
+        print(f"Scraper: Warning: failed to load NWS config parameters: {e}")
+
+    marine_forecast = []
+    try:
+        import requests
+        import re
+        nws_headers = {"User-Agent": "(marine-kiosk-dashboard, brian@example.com)"}
+        
+        # 1. Fetch latest CWF products from the office
+        url_list = f"https://api.weather.gov/products/types/CWF/locations/{nws_office}"
+        res_list = requests.get(url_list, headers=nws_headers, timeout=10)
+        if res_list.status_code == 200:
+            graph = res_list.json().get("@graph", [])
+            if graph:
+                latest_product_id = graph[0].get("id")
+                
+                # 2. Fetch the text content of the product
+                url_prod = f"https://api.weather.gov/products/{latest_product_id}"
+                res_prod = requests.get(url_prod, headers=nws_headers, timeout=10)
+                if res_prod.status_code == 200:
+                    product_text = res_prod.json().get("productText", "")
+                    
+                    # 3. Extract the zone segment using regex
+                    pattern = rf"({nws_zone}-.*?)\$\$"
+                    match = re.search(pattern, product_text, re.DOTALL)
+                    if match:
+                        extracted = match.group(1).strip()
+                        
+                        # 4. Parse periods
+                        periods_raw = re.findall(
+                            r"\.([A-Z0-9\s]+)\.\.\.(.*?)(?=\s*\.[A-Z0-9\s]+\.\.\.|\s*$)",
+                            extracted,
+                            re.DOTALL
+                        )
+                        for period_name, period_text in periods_raw:
+                            clean_text = re.sub(r"\s+", " ", period_text.strip())
+                            marine_forecast.append({
+                                "name": period_name.strip(),
+                                "text": clean_text
+                            })
+                    else:
+                        print(f"Scraper: Warning: could not find NWS zone segment for {nws_zone}")
+        else:
+            print(f"Scraper: Warning: failed to fetch NWS CWF product list: {res_list.status_code}")
+    except Exception as e:
+        print(f"Scraper: Warning: failed to fetch NWS marine forecast: {e}")
+
     output_data = {
         "station_id": station_id,
         "station_name": station_name,
@@ -94,6 +152,7 @@ def fetch_tide_data(station_id, units, datum):
         "datum": datum,
         "timezone": station.metadata.get("timezone", "LST"),
         "water_temp": water_temp,
+        "marine_forecast": marine_forecast,
         "tide_heights": tide_heights,
         "last_updated": now.isoformat()
     }
