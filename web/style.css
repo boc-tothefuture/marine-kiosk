@@ -175,6 +175,27 @@ body {
   }
 }
 
+.pulse-dot.offline {
+  background-color: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+  animation: pulse-ring-offline 2s infinite ease-in-out;
+}
+
+@keyframes pulse-ring-offline {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
 /* Plotting Graphic Area (Middle) */
 #wave-plot-container {
   flex-grow: 1;

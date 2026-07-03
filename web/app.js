@@ -21,7 +21,6 @@ const state = {
 const elements = {
   clockContainer: document.getElementById('clock-container'),
   stationName: document.getElementById('station-name'),
-  connectionStatus: document.getElementById('connection-status'),
   digitalTime: document.getElementById('digital-time'),
   digitalDate: document.getElementById('digital-date'),
   currentTideVal: document.getElementById('current-tide-val'),
@@ -337,11 +336,11 @@ function updateUI() {
   elements.currentTideUnit.textContent = state.units === 'english' ? 'FT' : 'M';
   
   if (state.connectionOnline && state.settings.source === 'live') {
-    elements.connectionStatus.className = 'status-dot online';
-    elements.connectionStatus.title = 'NOAA Connected';
+    elements.pulseDot.className = 'pulse-dot';
+    elements.pulseDot.title = 'NOAA Connected';
   } else {
-    elements.connectionStatus.className = 'status-dot offline';
-    elements.connectionStatus.title = 'Simulation Mode';
+    elements.pulseDot.className = 'pulse-dot offline';
+    elements.pulseDot.title = state.settings.source === 'sim' ? 'Simulated Offline Demo' : 'Connection Offline (Simulated)';
   }
   
   if (state.lastUpdated) {
