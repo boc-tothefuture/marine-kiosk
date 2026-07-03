@@ -31,7 +31,6 @@ const elements = {
   pulseDot: document.getElementById('status-pulse-dot'),
   waterTempContainer: document.getElementById('water-temp-container'),
   waterTempVal: document.getElementById('water-temp-val'),
-  datumInfo: document.getElementById('datum-info'),
   lastUpdatedText: document.getElementById('last-updated-text'),
   
   // SVG Canvas elements
@@ -351,7 +350,6 @@ async function loadData() {
 // Refresh UI Elements
 function updateUI() {
   elements.stationName.textContent = state.stationName;
-  elements.datumInfo.textContent = `DATUM: ${state.datum}`;
   elements.currentTideUnit.textContent = state.units === 'english' ? 'FT' : 'M';
   
   if (state.connectionOnline && state.settings.source === 'live') {
