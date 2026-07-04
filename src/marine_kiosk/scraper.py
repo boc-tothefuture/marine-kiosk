@@ -1,6 +1,8 @@
 import os
 import json
 import datetime
+import requests
+import re
 from noaa_coops import Station
 
 def fetch_tide_data(station_id, units, datum):
@@ -19,12 +21,11 @@ def fetch_tide_data(station_id, units, datum):
     station = Station(id=station_id)
     station_name = getattr(station, "name", f"Station {station_id}")
 
-    # Request predictions for yesterday, today, and tomorrow
-    # to handle timezone offsets cleanly.
+    # Fetch 3 days of predictions (yesterday, today, tomorrow) to support three tide cycles display
     now = datetime.datetime.now()
     begin_date = (now - datetime.timedelta(days=1)).strftime("%Y%m%d")
     end_date = (now + datetime.timedelta(days=2)).strftime("%Y%m%d")
-
+    
     df = station.get_data(
         begin_date=begin_date,
         end_date=end_date,
@@ -34,38 +35,68 @@ def fetch_tide_data(station_id, units, datum):
         time_zone="lst_ldt"
     )
 
+    # We sample once per hour to keep the JSON payload lightweight
+    df_hourly = df.resample("h").first()
+
+    tide_heights = []
+    for dt, row in df_hourly.iterrows():
+        val = row["v"]
+        tide_heights.append({
+            "time": dt.isoformat(),
+            "value": round(val, 3)
+        })
+
+    # Fetch exact high/low tide predictions (hilo)
+    tide_extremes = []
+    try:
+        df_hilo = station.get_data(
+            begin_date=begin_date,
+            end_date=end_date,
+            product="predictions",
+            datum=datum,
+            units=units,
+            time_zone="lst_ldt",
+            interval="hilo"
+        )
+        for dt, row in df_hilo.iterrows():
+            tide_extremes.append({
+                "time": dt.isoformat(),
+                "value": round(float(row["v"]), 3),
+                "type": str(row["type"]) # 'H' or 'L'
+            })
+    except Exception as e:
+        print(f"Scraper: Warning: failed to fetch exact tide extremes: {e}")
+
+    # Fetch predicted currents data for nearby station CAB1401 (Portland Harbor Entrance)
+    current_predictions = []
+    try:
+        currents_url = (
+            f"https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
+            f"?product=currents_predictions&station=CAB1401"
+            f"&begin_date={begin_date}&end_date={end_date}"
+            f"&units=english&time_zone=lst_ldt&format=json"
+        )
+        res_curr = requests.get(currents_url, timeout=10)
+        if res_curr.status_code == 200:
+            curr_json = res_curr.json()
+            if "current_predictions" in curr_json:
+                cps = curr_json["current_predictions"]["cp"]
+                for idx in range(0, len(cps), 10):
+                    item = cps[idx]
+                    current_predictions.append({
+                        "time": item["Time"].replace(" ", "T"),
+                        "value": round(float(item["Velocity_Major"]), 2)
+                    })
+    except Exception as e:
+        print(f"Scraper: Warning: failed to fetch predicted currents: {e}")
+
     # Determine station's local current day by applying metadata timezone offset to UTC
     tz_offset_hours = int(station.metadata.get("timezonecorr", 0))
     utc_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     station_local_now = utc_now + datetime.timedelta(hours=tz_offset_hours)
     station_today = station_local_now.date()
 
-    # Filter to only entries matching the station's local date
-    df_today = df[df.index.date == station_today]
 
-    # Fallback to system date if empty
-    if df_today.empty:
-        system_today = now.date()
-        df_today = df[df.index.date == system_today]
-        station_today = system_today
-
-    if df_today.empty:
-        raise ValueError(f"No prediction data found for date {station_today}")
-
-    # Resample to hourly and take the nearest value to the top of the hour
-    df_hourly = df_today.resample("h").nearest()
-
-    tide_heights = []
-    for hour in range(24):
-        hour_rows = df_hourly[df_hourly.index.hour == hour]
-        if not hour_rows.empty:
-            val = float(hour_rows.iloc[0]["v"])
-        else:
-            val = 0.0
-        tide_heights.append({
-            "hour": hour,
-            "value": round(val, 3)
-        })
 
     # Fetch water temperature (latest reading)
     water_temp = None
@@ -101,8 +132,6 @@ def fetch_tide_data(station_id, units, datum):
 
     marine_forecast = []
     try:
-        import requests
-        import re
         nws_headers = {"User-Agent": "(marine-kiosk-dashboard, brian@example.com)"}
         
         # 1. Fetch latest CWF products from the office
@@ -154,6 +183,8 @@ def fetch_tide_data(station_id, units, datum):
         "water_temp": water_temp,
         "marine_forecast": marine_forecast,
         "tide_heights": tide_heights,
+        "tide_extremes": tide_extremes,
+        "current_predictions": current_predictions,
         "last_updated": now.isoformat()
     }
 

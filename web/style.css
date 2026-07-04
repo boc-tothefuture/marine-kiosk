@@ -22,7 +22,7 @@ body {
   justify-content: center;
   align-items: center;
   background: radial-gradient(circle at center, #0f1626 0%, #020408 100%);
-  padding: 5vh 5vw; /* Generous padding for high-end feel and overscan safety */
+  padding: 3vh 5vw; /* Safe padding for high-end feel and overscan safety */
 }
 
 #clock-container {
@@ -108,6 +108,28 @@ body {
   letter-spacing: 0.5px;
 }
 
+#moon-phase {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-family: 'Outfit', sans-serif;
+}
+
+#moon-symbol {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+  line-height: 1;
+}
+
+#moon-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
 .header-right {
   display: flex;
   flex-direction: column;
@@ -157,12 +179,14 @@ body {
   color: var(--accent-color);
 }
 
-#water-temp-container {
+#water-temp-container,
+#current-status-container,
+#bar-status-container {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  justify-content: flex-end;
+  justify-content: space-between;
+  width: 330px;
+  margin-top: 12px;
   font-family: 'Outfit', sans-serif;
 }
 
@@ -177,6 +201,84 @@ body {
   font-size: 1.3rem;
   font-weight: 600;
   color: #e2e8f0;
+}
+
+
+
+.bar-status-badge-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+#bar-status-label {
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: #64748b;
+}
+
+#bar-status-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  transition: all 0.3s ease;
+}
+
+#bar-status-val.bar-open,
+#bar-status-val.bar-open.status-safe {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+#bar-status-val.bar-open.status-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+}
+
+#bar-status-val.bar-open.status-danger {
+  background: rgba(229, 83, 83, 0.15);
+  color: #e55353;
+  border: 1px solid rgba(229, 83, 83, 0.3);
+  box-shadow: 0 0 10px rgba(229, 83, 83, 0.15);
+}
+
+#bar-status-val.bar-closed {
+  background: rgba(255, 255, 255, 0.03);
+  color: #64748b;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+#bar-status-sub {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  transition: color 0.3s ease;
+}
+
+#bar-status-sub.status-safe {
+  color: #34d399;
+}
+
+#bar-status-sub.status-warning {
+  color: #f59e0b;
+}
+
+#bar-status-sub.status-danger {
+  color: #e55353;
+}
+
+#bar-status-sub.status-closed {
+  color: #64748b;
 }
 
 /* Status Pulse Dot */
@@ -227,17 +329,16 @@ body {
 
 /* Plotting Graphic Area (Middle) */
 #wave-plot-container {
-  flex-grow: 1;
+  height: 48vh;
   width: 100%;
-  margin: 4vh 0;
+  margin: 2.5vh 0;
   position: relative;
   display: flex;
-  gap: 32px;
   align-items: stretch;
 }
 
 #wave-plot-left {
-  flex: 0 0 65%;
+  flex: 1;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -249,76 +350,117 @@ body {
   overflow: visible; /* Let stroke glow filter bleed out of bounds */
 }
 
-/* NWS Marine Forecast Sidebar */
-#forecast-sidebar {
-  flex: 0 0 35%;
+#wave-walkable-path {
+  stroke: #10b981;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.7));
+}
+
+#wave-warning-path {
+  stroke: #f59e0b;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.7));
+}
+
+#wave-danger-path {
+  stroke: #e55353;
+  filter: drop-shadow(0 0 6px rgba(229, 83, 83, 0.7));
+}
+
+/* Top Center: Forecast Ticker */
+#forecast-header-container {
+  flex: 0 1 42%;
+  height: 110px;
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  padding: 12px 18px;
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  overflow: hidden;
+  align-self: center;
 }
 
-.sidebar-title {
-  font-size: 1.1rem;
+.forecast-ticker-title {
+  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   color: var(--accent-color);
   text-transform: uppercase;
-  margin-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 4px;
 }
 
-#forecast-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  overflow-y: auto;
+#forecast-header-scroll {
   flex-grow: 1;
-  padding-right: 4px;
+  overflow: hidden;
+  position: relative;
+  height: 60px;
 }
 
-#forecast-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-#forecast-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.forecast-card {
+#forecast-scroll-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
-  padding-bottom: 10px;
+  transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+.forecast-ticker-card {
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
   text-align: left;
 }
 
-.forecast-card:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.forecast-period {
-  font-size: 0.95rem;
+.forecast-ticker-period {
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: #cbd5e1;
+  letter-spacing: 0.5px;
+  color: #e2e8f0;
   text-transform: uppercase;
 }
 
-.forecast-text {
-  font-size: 0.95rem;
+.forecast-ticker-text {
+  font-size: 0.88rem;
   font-weight: 400;
-  line-height: 1.45;
+  line-height: 1.35;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Footer bottom layout with legend */
+#footer-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+#legend-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-box {
+  width: 14px;
+  height: 14px;
+  background: #10b981;
+  border-radius: 3px;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.legend-label {
+  font-size: 0.9rem;
+  font-weight: 500;
   color: #94a3b8;
 }
 
@@ -370,6 +512,8 @@ body {
   padding-top: 18px;
   padding-left: 2px;
   padding-right: 2px;
+  position: relative;
+  height: 40px;
 }
 
 .time-tick {
@@ -529,3 +673,93 @@ body {
   background: #475569;
   color: #f1f5f9;
 }
+
+/* Day Boundary Visuals */
+.day-boundary-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed rgba(255, 255, 255, 0.2);
+  mask-image: linear-gradient(to bottom, black 0%, rgba(0, 0, 0, 0.35) 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, rgba(0, 0, 0, 0.35) 80%, transparent 100%);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.day-shading-tomorrow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 0%, rgba(255, 255, 255, 0.005) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.day-boundary-label {
+  position: absolute;
+  top: -28px;
+  transform: translateX(-50%);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--accent-color);
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+/* Timeline Day Change Highlight */
+.time-tick.day-change {
+  color: var(--accent-color);
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  width: auto; /* Allow expanding horizontally for the date */
+}
+
+.tick-day-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent-color);
+  margin-top: 4px;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* Real-time HTML indicator dot to prevent SVG stretch distortion */
+#now-marker-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #ffffff;
+  border: 2.5px solid #06b6d4;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.5);
+  transition: border-color 0.3s ease;
+}
+
+
+
+#current-status-label {
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: #64748b;
+}
+
+#current-status-val {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+

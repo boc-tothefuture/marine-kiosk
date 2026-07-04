@@ -21,6 +21,20 @@
         <div class="header-left">
           <div id="digital-time">12:34<span>PM</span></div>
           <div id="digital-date">Friday, October 27, 2023</div>
+          <div id="moon-phase">
+            <span id="moon-symbol">--</span>
+            <span id="moon-name">--</span>
+          </div>
+        </div>
+        
+        <!-- Top Center: NWS Coastal Marine Forecast Ticker -->
+        <div id="forecast-header-container">
+          <div class="forecast-ticker-title">Casco Bay Forecast</div>
+          <div id="forecast-header-scroll">
+            <div id="forecast-scroll-wrapper">
+              <!-- Dynamically populated vertical sliding periods -->
+            </div>
+          </div>
         </div>
         
         <!-- Top Right: Giant Tide Reading -->
@@ -37,12 +51,23 @@
             <span id="water-temp-label">WATER TEMP</span>
             <span id="water-temp-val">--</span>
           </div>
+          <div id="current-status-container">
+            <span id="current-status-label">HARBOR CURRENT</span>
+            <span id="current-status-val">--</span>
+          </div>
+          <div id="bar-status-container">
+            <span id="bar-status-label">GDI-LDI BAR</span>
+            <div class="bar-status-badge-wrapper">
+              <span id="bar-status-val" class="bar-closed">CLOSED</span>
+              <span id="bar-status-sub">Opens at --:--</span>
+            </div>
+          </div>
         </div>
       </header>
 
       <!-- Middle Section: Dynamic SVG Wave Plot Area -->
       <main id="wave-plot-container">
-        <!-- Left Side: Tide Curve Plot -->
+        <!-- Tide Curve Plot (Full Width) -->
         <div id="wave-plot-left">
           <!-- SVG Canvas for drawing paths -->
           <svg id="tide-svg" viewBox="0 0 1000 400" preserveAspectRatio="none">
@@ -70,26 +95,25 @@
             <!-- Neon Glowing Wave Stroke Line -->
             <path id="wave-stroke-path" d="" fill="none" stroke="#06b6d4" stroke-width="4" filter="url(#cyan-glow)" />
             
+            <!-- Walkable overlay paths (Tide < 4.0 ft with warnings) -->
+            <path id="wave-walkable-path" d="" fill="none" stroke="#10b981" stroke-width="4.5" />
+            <path id="wave-warning-path" d="" fill="none" stroke="#f59e0b" stroke-width="4.5" />
+            <path id="wave-danger-path" d="" fill="none" stroke="#ef4444" stroke-width="4.5" />
+            
             <!-- Vertical Dashed Hour Marker (NOW) -->
             <line id="now-marker-line" x1="0" y1="0" x2="0" y2="400" stroke="#475569" stroke-dasharray="6,6" stroke-width="1.5" />
             
             <!-- Active Time Dot Intersection (Dual-circle glow to avoid filter rendering bugs) -->
-            <circle id="now-marker-glow" cx="0" cy="0" r="18" fill="#06b6d4" opacity="0.25" />
-            <circle id="now-marker-dot" cx="0" cy="0" r="6" fill="#ffffff" stroke="#06b6d4" stroke-width="2.5" />
+            <circle id="now-marker-glow" cx="0" cy="0" r="0" fill="#06b6d4" opacity="0" />
           </svg>
 
           <!-- HTML Overlay for High/Low tide callouts (dynamically positioned by app.js) -->
           <div id="tide-overlay-labels">
             <!-- Dynamic High/Low Tide text tags will be appended here -->
           </div>
-        </div>
 
-        <!-- Right Side: NWS Coastal Marine Forecast -->
-        <div id="forecast-sidebar">
-          <div class="sidebar-title">Casco Bay Forecast</div>
-          <div id="forecast-list">
-            <!-- Dynamic period forecast cards injected by app.js -->
-          </div>
+          <!-- Real-time Active Time Indicator Dot (drawn in HTML to prevent SVG aspect ratio stretching) -->
+          <div id="now-marker-dot"></div>
         </div>
       </main>
 
@@ -111,10 +135,16 @@
           <div class="time-tick">22</div>
           <div class="time-tick">00</div>
         </div>
-        <div id="meta-info">
-          <span id="station-name">PORTLAND, MAINE</span>
-          <span class="meta-sep">•</span>
-          <span id="last-updated-text">UPDATED: --</span>
+        <div id="footer-bottom-row">
+          <div id="legend-container">
+            <span class="legend-box"></span>
+            <span class="legend-label">Walkable Bar (&lt; 4.0 FT)</span>
+          </div>
+          <div id="meta-info">
+            <span id="station-name">PORTLAND, MAINE</span>
+            <span class="meta-sep">•</span>
+            <span id="last-updated-text">UPDATED: --</span>
+          </div>
         </div>
       </footer>
       
