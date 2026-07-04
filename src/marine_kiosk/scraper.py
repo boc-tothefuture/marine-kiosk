@@ -16,6 +16,21 @@ def fetch_tide_data(station_id, units, datum):
     os.makedirs(web_dir, exist_ok=True)
     output_path = os.path.join(web_dir, "tide_data.json")
 
+    # Load configuration parameters for location coordinates
+    astral_lat = None
+    astral_lng = None
+    astral_elev = 0.0
+    try:
+        config_path = os.path.join(root_dir, "tide_config.json")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                cfg = json.load(f)
+                astral_lat = cfg.get("astral_latitude")
+                astral_lng = cfg.get("astral_longitude")
+                astral_elev = cfg.get("astral_elevation", 0.0)
+    except Exception as e:
+        print(f"Scraper: Warning: failed to load tide_config.json at startup: {e}")
+
     print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Scraping station {station_id} ({units}, {datum})...")
     
     station = Station(id=station_id)
@@ -173,6 +188,93 @@ def fetch_tide_data(station_id, units, datum):
     except Exception as e:
         print(f"Scraper: Warning: failed to fetch NWS marine forecast: {e}")
 
+    # Calculate highly accurate sunrise, sunset, moonrise, moonset using astral
+    astronomical_data = {}
+    try:
+        from astral import Observer
+        from astral.sun import sun
+        from astral.moon import moonrise, moonset, phase
+
+        # Use configured coordinates if defined, otherwise fallback to station metadata coordinates
+        lat = float(astral_lat if astral_lat is not None else station.metadata.get("lat", 43.658))
+        lng = float(astral_lng if astral_lng is not None else station.metadata.get("lng", -70.244))
+        elev = float(astral_elev)
+        
+        observer = Observer(lat, lng, elev)
+        
+        # Get offset timezone
+        tz_offset_hours = int(station.metadata.get("timezonecorr", 0))
+        tz = datetime.timezone(datetime.timedelta(hours=tz_offset_hours))
+
+        for i in range(-1, 3):
+            check_date = (now + datetime.timedelta(days=i)).date()
+            date_key = check_date.isoformat()
+            
+            # Sun
+            sunrise_str = None
+            sunset_str = None
+            try:
+                s = sun(observer, check_date, tzinfo=tz)
+                sunrise_str = s["sunrise"].isoformat()
+                sunset_str = s["sunset"].isoformat()
+            except Exception as e:
+                print(f"Scraper: Sun calculation failed for {date_key}: {e}")
+
+            # Moonrise
+            moonrise_str = None
+            try:
+                mr = moonrise(observer, check_date, tz)
+                if mr:
+                    moonrise_str = mr.isoformat()
+            except Exception as e:
+                pass
+
+            # Moonset
+            moonset_str = None
+            try:
+                ms = moonset(observer, check_date, tz)
+                if ms:
+                    moonset_str = ms.isoformat()
+            except Exception as e:
+                pass
+
+            # Moon Phase
+            p_val = 0.0
+            p_name = "New Moon"
+            p_symbol = "🌑"
+            try:
+                p_val = phase(check_date)
+                if p_val < 1.0 or p_val > 28.53:
+                    p_name, p_symbol = "New Moon", "🌑"
+                elif p_val < 6.38:
+                    p_name, p_symbol = "Waxing Crescent", "🌒"
+                elif p_val < 8.38:
+                    p_name, p_symbol = "First Quarter", "🌓"
+                elif p_val < 13.76:
+                    p_name, p_symbol = "Waxing Gibbous", "🌔"
+                elif p_val < 15.76:
+                    p_name, p_symbol = "Full Moon", "🌕"
+                elif p_val < 21.14:
+                    p_name, p_symbol = "Waning Gibbous", "🌖"
+                elif p_val < 23.14:
+                    p_name, p_symbol = "Last Quarter", "🌗"
+                else:
+                    p_name, p_symbol = "Waning Crescent", "🌘"
+            except Exception as e:
+                pass
+
+            astronomical_data[date_key] = {
+                "sunrise": sunrise_str,
+                "sunset": sunset_str,
+                "moonrise": moonrise_str,
+                "moonset": moonset_str,
+                "moon_phase_value": round(p_val, 2),
+                "moon_phase_name": p_name,
+                "moon_phase_symbol": p_symbol
+            }
+    except Exception as e:
+        print(f"Scraper: Failed to compute astronomical data: {e}")
+
     output_data = {
         "station_id": station_id,
         "station_name": station_name,
@@ -185,6 +287,7 @@ def fetch_tide_data(station_id, units, datum):
         "tide_heights": tide_heights,
         "tide_extremes": tide_extremes,
         "current_predictions": current_predictions,
+        "astronomical_data": astronomical_data,
         "last_updated": now.isoformat()
     }
 

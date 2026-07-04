@@ -5,5 +5,8 @@
   "port": 8081,
   "update_interval_hours": 1,
   "nws_office": "GYX",
-  "nws_zone": "ANZ153"
+  "nws_zone": "ANZ153",
+  "astral_latitude": 43.658054,
+  "astral_longitude": -70.24416,
+  "astral_elevation": 0.0
 }
