@@ -5,3 +5,7 @@ __pycache__/
 *.log
 tide_data.json
 web/tide_data.json
+node_modules/
+web/node_modules/
+*.map
+

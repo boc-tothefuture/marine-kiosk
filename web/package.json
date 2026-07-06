@@ -1,0 +1,16 @@
+{
+  "name": "marine-kiosk-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/app.ts --bundle --outfile=app.js --minify --sourcemap",
+    "watch": "esbuild src/app.ts --bundle --outfile=app.js --watch --sourcemap",
+    "lint": "biome check src/",
+    "format": "biome format --write src/"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.3",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.4"
+  }
+}
