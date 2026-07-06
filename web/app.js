@@ -1,941 +1,1156 @@
-// Tide Clock TV UI Application State
+// --- State & Elements ---
+
 const state = {
-  stationId: '8418150',
-  stationName: 'PORTLAND, MAINE',
-  dateStr: '',
-  tideHeights: [], // Array of {hour, value}
-  tideExtremes: [], // Array of exact high/low {time, value, type}
-  currentPredictions: [], // Array of predicted currents {time, value}
-  units: 'english',
-  datum: 'MLLW',
-  lastUpdated: null,
-  waterTemp: null,
-  marineForecast: [],
-  connectionOnline: true,
-  plotStartMs: null,
-  
-  // User Preferences (saved in localStorage)
-  settings: {
-    theme: 'ocean',       // ocean, cyber, mono, amber
-    scale: 'dynamic',     // dynamic, fixed
-    source: 'live'        // live, sim
-  }
+	stationId: "8418150",
+	stationName: "PORTLAND HARBOR",
+	dateStr: "",
+	tideHeights: [],
+	tideExtremes: [],
+	currentPredictions: [],
+	units: "english",
+	datum: "MLLW",
+	waterTemp: null,
+	marineForecast: [],
+	connectionOnline: true,
+	selectedDayOffset: 0,
 };
 
-// DOM Elements
 const elements = {
-  clockContainer: document.getElementById('clock-container'),
-  stationName: document.getElementById('station-name'),
-  digitalTime: document.getElementById('digital-time'),
-  digitalDate: document.getElementById('digital-date'),
-  moonSymbol: document.getElementById('moon-symbol'),
-  moonName: document.getElementById('moon-name'),
-  currentTideVal: document.getElementById('current-tide-val'),
-  currentTideUnit: document.getElementById('current-tide-unit'),
-  tideStatusText: document.getElementById('tide-status-text'),
-  pulseDot: document.getElementById('status-pulse-dot'),
-  waterTempContainer: document.getElementById('water-temp-container'),
-  waterTempVal: document.getElementById('water-temp-val'),
-  barStatusVal: document.getElementById('bar-status-val'),
-  barStatusSub: document.getElementById('bar-status-sub'),
-  currentStatusVal: document.getElementById('current-status-val'),
-  lastUpdatedText: document.getElementById('last-updated-text'),
-  
-  // SVG Canvas elements
-  tideSvg: document.getElementById('tide-svg'),
-  waveFillPath: document.getElementById('wave-fill-path'),
-  waveStrokePath: document.getElementById('wave-stroke-path'),
-  waveWalkablePath: document.getElementById('wave-walkable-path'),
-  waveWarningPath: document.getElementById('wave-warning-path'),
-  waveDangerPath: document.getElementById('wave-danger-path'),
-  nowMarkerLine: document.getElementById('now-marker-line'),
-  nowMarkerGlow: document.getElementById('now-marker-glow'),
-  nowMarkerDot: document.getElementById('now-marker-dot'),
-  tideOverlayLabels: document.getElementById('tide-overlay-labels'),
-  forecastScrollWrapper: document.getElementById('forecast-scroll-wrapper'),
-  forecastHeaderContainer: document.getElementById('forecast-header-container'),
-  timelineLabels: document.getElementById('timeline-labels'),
-  
-  // Settings Modal
-  settingsToggle: document.getElementById('settings-toggle'),
-  settingsPanel: document.getElementById('settings-panel'),
-  settingsSave: document.getElementById('settings-save'),
-  settingsClose: document.getElementById('settings-close'),
-  settingTheme: document.getElementById('setting-theme'),
-  settingScale: document.getElementById('setting-scale'),
-  settingSource: document.getElementById('setting-source')
+	stationName: document.getElementById("station-name"),
+	digitalTime: document.getElementById("digital-time"),
+	digitalDate: document.getElementById("digital-date"),
+	currentTideVal: document.getElementById("current-tide-val"),
+	currentTideUnit: document.getElementById("current-tide-unit"),
+	currentTideSlope: document.getElementById("current-tide-slope"),
+	currentStatusVal: document.getElementById("current-status-val"),
+	extremesList: document.getElementById("extremes-list"),
+	forecastList: document.getElementById("forecast-list"),
+	weatherTimelineBar: document.getElementById("weather-timeline-bar"),
+
+	btnToday: document.getElementById("btn-today"),
+	btnTomorrow: document.getElementById("btn-tomorrow"),
+
+	sunRiseTime: document.getElementById("sun-rise-time"),
+	sunSetTime: document.getElementById("sun-set-time"),
+	daylightDuration: document.getElementById("daylight-duration"),
+	moonRiseTime: document.getElementById("moon-rise-time"),
+	moonSetTime: document.getElementById("moon-set-time"),
+	moonPhaseName: document.getElementById("moon-phase-name"),
+
+	metaStationId: document.getElementById("meta-station-id"),
+	lastUpdatedText: document.getElementById("last-updated-text"),
+
+	tidelogGridLines: document.getElementById("tidelog-grid-lines"),
+	waveStrokePath: document.getElementById("wave-stroke-path"),
+	waveFillPath: document.getElementById("wave-fill-path"),
+	sunPath: document.getElementById("sun-path"),
+	sunStrokePath: document.getElementById("sun-stroke-path"),
+	lunarTransitPath: document.getElementById("lunar-transit-path"),
+	moonIndicatorGroup: document.getElementById("moon-indicator-group"),
+	moonIndicatorIcon: document.getElementById("moon-indicator-icon"),
+	nowMarkerLine: document.getElementById("now-marker-line"),
+	nowMarkerDot: document.getElementById("now-marker-dot"),
+
+	sunriseLine: document.getElementById("sunrise-line"),
+	sunsetLine: document.getElementById("sunset-line"),
+	sunriseTextLabel: document.getElementById("sunrise-text-label"),
+	sunriseTimeLabel: document.getElementById("sunrise-time-label"),
+	sunsetTextLabel: document.getElementById("sunset-text-label"),
+	sunsetTimeLabel: document.getElementById("sunset-time-label"),
+
+	moonriseLine: document.getElementById("moonrise-line"),
+	moonsetLine: document.getElementById("moonset-line"),
+	moonriseTextLabel: document.getElementById("moonrise-text-label"),
+	moonriseTimeLabel: document.getElementById("moonrise-time-label"),
+	moonsetTextLabel: document.getElementById("moonset-text-label"),
+	moonsetTimeLabel: document.getElementById("moonset-time-label"),
+
+	tideOverlayLabels: document.getElementById("tide-overlay-labels"),
+	currentsEventsWrapper: document.getElementById("currents-events-wrapper"),
+
+	currentsFloodPath: document.getElementById("currents-flood-path"),
+	currentsEbbPath: document.getElementById("currents-ebb-path"),
+	currentsStrokePath: document.getElementById("currents-stroke-path"),
 };
 
-// Initialize Application
-function init() {
-  loadSettings();
-  applyThemeClass();
-  setupEventListeners();
-  
-  // Start clock loop (updates every second)
-  updateTime();
-  setInterval(updateTime, 1000);
-  
-  // Initial data load
-  loadData();
-  
-  // Periodically refresh data (every 10 minutes)
-  setInterval(loadData, 10 * 60 * 1000);
-  
-  // Add window resize listener to reposition callouts if needed
-  window.addEventListener('resize', renderWavePlot);
+// --- Initialization ---
+
+window.addEventListener("DOMContentLoaded", () => {
+	setupDayNavigation();
+	loadData();
+	setInterval(updateClock, 1000);
+	setInterval(loadData, 10 * 60 * 1000);
+});
+
+function setupDayNavigation() {
+	elements.btnToday.addEventListener("click", () =>
+		handleDayToggle(0, elements.btnToday, elements.btnTomorrow),
+	);
+	elements.btnTomorrow.addEventListener("click", () =>
+		handleDayToggle(1, elements.btnTomorrow, elements.btnToday),
+	);
 }
 
-// Load settings from localStorage
-function loadSettings() {
-  const saved = localStorage.getItem('tide_clock_tv_settings');
-  if (saved) {
-    try {
-      state.settings = { ...state.settings, ...JSON.parse(saved) };
-    } catch (e) {
-      console.error('Failed to parse saved settings:', e);
-    }
-  }
-  
-  // Sync select inputs with state
-  elements.settingTheme.value = state.settings.theme;
-  elements.settingScale.value = state.settings.scale;
-  elements.settingSource.value = state.settings.source;
+function handleDayToggle(offset, activeBtn, inactiveBtn) {
+	if (state.selectedDayOffset !== offset) {
+		state.selectedDayOffset = offset;
+		activeBtn.classList.add("active");
+		inactiveBtn.classList.remove("active");
+		updateUI();
+	}
 }
 
-// Save settings to localStorage
-function saveSettings() {
-  state.settings.theme = elements.settingTheme.value;
-  state.settings.scale = elements.settingScale.value;
-  state.settings.source = elements.settingSource.value;
-  
-  localStorage.setItem('tide_clock_tv_settings', JSON.stringify(state.settings));
-  
-  applyThemeClass();
-  loadData(); // Reload and redraw
-}
+// --- Data Fetching & Processing ---
 
-// Apply the theme class to the container
-function applyThemeClass() {
-  elements.clockContainer.className = ''; // Reset
-  elements.clockContainer.classList.add(`theme-${state.settings.theme}`);
-  
-  // Highlight active theme color in settings save button
-  elements.settingsSave.style.backgroundColor = 'var(--accent-color)';
-  
-  // Update stroke gradient stops and glow colors dynamically
-  const glowStroke = document.getElementById('wave-stroke-path');
-  const fillGradStop1 = document.querySelector('#wave-fill-grad stop:first-child');
-  const fillGradStop2 = document.querySelector('#wave-fill-grad stop:last-child');
-  
-  let colorHex = '#06b6d4'; // default ocean cyan
-  if (state.settings.theme === 'cyber') colorHex = '#ec4899';
-  if (state.settings.theme === 'mono') colorHex = '#f1f5f9';
-  if (state.settings.theme === 'amber') colorHex = '#ffb300';
-  
-  glowStroke.setAttribute('stroke', colorHex);
-  elements.nowMarkerDot.style.borderColor = colorHex;
-  elements.nowMarkerGlow.setAttribute('fill', colorHex);
-  
-  fillGradStop1.setAttribute('stop-color', colorHex);
-  fillGradStop2.setAttribute('stop-color', colorHex);
-}
-
-// Setup Event Listeners
-function setupEventListeners() {
-  elements.settingsToggle.addEventListener('click', () => {
-    elements.settingsPanel.classList.remove('hidden');
-  });
-  
-  elements.settingsClose.addEventListener('click', () => {
-    elements.settingsPanel.classList.add('hidden');
-    loadSettings();
-  });
-  
-  elements.settingsSave.addEventListener('click', () => {
-    saveSettings();
-    elements.settingsPanel.classList.add('hidden');
-  });
-  
-  // Add 'S' key listener to open settings panel (clean TV interaction)
-  document.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 's') {
-      if (elements.settingsPanel.classList.contains('hidden')) {
-        elements.settingsPanel.classList.remove('hidden');
-      } else {
-        elements.settingsPanel.classList.add('hidden');
-      }
-    }
-  });
-}
-
-// Update clock and date displays
-function updateTime() {
-  const now = new Date();
-  
-  // Time formatting (Outfit weight 200)
-  let hours = now.getHours();
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12; // convert 0 to 12
-  elements.digitalTime.innerHTML = `${hours}:${minutes}<span>${ampm}</span>`;
-  
-  // Date formatting (Outfit weight 300)
-  const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
-  elements.digitalDate.textContent = now.toLocaleDateString('en-US', options);
-  
-  // Update moon phase
-  updateMoonPhase(now);
-  
-  // Update the line position and active readout based on fractional hour
-  updateNowTracker(now);
-}
-
-// Calculate moon phase (0 to 1) where 0 is New Moon, 0.5 is Full Moon
-function getMoonPhase(date) {
-  const epoch = new Date(Date.UTC(2000, 0, 6, 18, 14, 0)).getTime();
-  const msPerDay = 24 * 60 * 60 * 1000;
-  const synodicMonth = 29.530588853;
-  
-  const diffMs = date.getTime() - epoch;
-  const diffDays = diffMs / msPerDay;
-  const phase = (diffDays / synodicMonth) % 1;
-  return phase < 0 ? phase + 1 : phase;
-}
-
-// Map phase percentage to symbol and descriptive text
-function getMoonPhaseDetails(date) {
-  const phase = getMoonPhase(date);
-  let name = "";
-  let symbol = "";
-  
-  if (phase < 0.03 || phase >= 0.97) {
-    name = "New Moon";
-    symbol = "🌑";
-  } else if (phase >= 0.03 && phase < 0.22) {
-    name = "Waxing Crescent";
-    symbol = "🌒";
-  } else if (phase >= 0.22 && phase < 0.28) {
-    name = "First Quarter";
-    symbol = "🌓";
-  } else if (phase >= 0.28 && phase < 0.47) {
-    name = "Waxing Gibbous";
-    symbol = "🌔";
-  } else if (phase >= 0.47 && phase < 0.53) {
-    name = "Full Moon";
-    symbol = "🌕";
-  } else if (phase >= 0.53 && phase < 0.72) {
-    name = "Waning Gibbous";
-    symbol = "🌖";
-  } else if (phase >= 0.72 && phase < 0.78) {
-    name = "Last Quarter";
-    symbol = "🌗";
-  } else {
-    name = "Waning Crescent";
-    symbol = "🌘";
-  }
-  
-  return { phase, name, symbol };
-}
-
-// Update DOM elements for Moon Phase
-function updateMoonPhase(date) {
-  const details = getMoonPhaseDetails(date);
-  if (elements.moonSymbol && elements.moonName) {
-    elements.moonSymbol.textContent = details.symbol;
-    elements.moonName.textContent = details.name;
-    elements.moonSymbol.title = `${Math.round(details.phase * 100)}% Phase`;
-  }
-}
-
-// Cosine Interpolation for smooth curve calculations
-function cosineInterpolate(y1, y2, mu) {
-  const mu2 = (1 - Math.cos(mu * Math.PI)) / 2;
-  return y1 * (1 - mu2) + y2 * mu2;
-}
-
-// Calculate interpolated tide value at any absolute time (milliseconds epoch)
-function getTideHeightAtTime(targetTimeMs) {
-  if (state.tideHeights.length === 0) return 0.0;
-  
-  // Find bracketing prediction points
-  let lower = null;
-  let upper = null;
-  
-  for (let i = 0; i < state.tideHeights.length; i++) {
-    const pt = state.tideHeights[i];
-    const t = pt.timeMs;
-    
-    if (t <= targetTimeMs) {
-      if (!lower || t > lower.timeMs) {
-        lower = pt;
-      }
-    }
-    if (t >= targetTimeMs) {
-      if (!upper || t < upper.timeMs) {
-        upper = pt;
-      }
-    }
-  }
-  
-  if (!lower && !upper) return 0.0;
-  if (!lower) return upper.value;
-  if (!upper) return lower.value;
-  
-  const tLower = lower.timeMs;
-  const tUpper = upper.timeMs;
-  
-  if (tLower === tUpper) return lower.value;
-  
-  const mu = (targetTimeMs - tLower) / (tUpper - tLower);
-  return cosineInterpolate(lower.value, upper.value, mu);
-}
-
-// Calculate interpolated predicted current value (knots, positive=flood, negative=ebb) at any absolute time
-function getCurrentSpeedAtTime(targetTimeMs) {
-  if (!state.currentPredictions || state.currentPredictions.length === 0) return 0.0;
-  
-  // Find bracketing prediction points
-  let lower = null;
-  let upper = null;
-  
-  for (let i = 0; i < state.currentPredictions.length; i++) {
-    const pt = state.currentPredictions[i];
-    const t = pt.timeMs;
-    
-    if (t <= targetTimeMs) {
-      if (!lower || t > lower.timeMs) {
-        lower = pt;
-      }
-    }
-    if (t >= targetTimeMs) {
-      if (!upper || t < upper.timeMs) {
-        upper = pt;
-      }
-    }
-  }
-  
-  if (!lower && !upper) return 0.0;
-  if (!lower) return upper.value;
-  if (!upper) return lower.value;
-  
-  const tLower = lower.timeMs;
-  const tUpper = upper.timeMs;
-  
-  if (tLower === tUpper) return lower.value;
-  
-  const mu = (targetTimeMs - tLower) / (tUpper - tLower);
-  return cosineInterpolate(lower.value, upper.value, mu);
-}
-
-// Update real-time tide markers (Dashed line, dot position, and current reading values)
-function updateNowTracker(now) {
-  if (state.tideHeights.length === 0 || !state.plotStartMs) return;
-  
-  const nowMs = now.getTime();
-  const durationMs = 36 * 3600 * 1000;
-  
-  // Calculate dynamic X coordinate based on elapsed time since chart was last plotted
-  const xNow = ((nowMs - state.plotStartMs) / durationMs) * 1000;
-  
-  // Interpolated current tide value
-  const currentTideHeight = getTideHeightAtTime(nowMs);
-  
-  // Map this value to SVG Y Coordinate
-  const yNow = getSvgYCoordinate(currentTideHeight);
-  
-  // Move vertical line & glow ring in SVG, position HTML indicator dot
-  elements.nowMarkerLine.setAttribute('x1', xNow);
-  elements.nowMarkerLine.setAttribute('x2', xNow);
-  elements.nowMarkerGlow.setAttribute('cx', xNow);
-  elements.nowMarkerGlow.setAttribute('cy', yNow);
-  elements.nowMarkerDot.style.left = `${(xNow / 1000) * 100}%`;
-  elements.nowMarkerDot.style.top = `${(yNow / 400) * 100}%`;
-  
-  // Update Top-Right readouts
-  const sign = currentTideHeight >= 0 ? '+' : '';
-  elements.currentTideVal.textContent = `${sign}${currentTideHeight.toFixed(1)}`;
-  
-  // Determine if tide is rising or falling (slope check 5 minutes into the future)
-  const checkTimeMs = nowMs + 5 * 60 * 1000; // +5 minutes
-  const futureVal = getTideHeightAtTime(checkTimeMs);
-  
-  if (futureVal > currentTideHeight) {
-    elements.tideStatusText.innerHTML = 'RISING TIDE <span class="tide-arrow">↑</span>';
-  } else {
-    elements.tideStatusText.innerHTML = 'FALLING TIDE <span class="tide-arrow">↓</span>';
-  }
-
-  // Update current speed readout (knots, flood/ebb/slack)
-  const currentSpeed = getCurrentSpeedAtTime(nowMs);
-  if (currentSpeed === null || currentSpeed === undefined || !state.currentPredictions || state.currentPredictions.length === 0) {
-    elements.currentStatusVal.textContent = '--';
-  } else {
-    const absSpeed = Math.abs(currentSpeed).toFixed(1);
-    if (Math.abs(currentSpeed) < 0.15) {
-      elements.currentStatusVal.textContent = 'SLACK';
-    } else if (currentSpeed > 0) {
-      elements.currentStatusVal.textContent = `${absSpeed} KT FLOOD`;
-    } else {
-      elements.currentStatusVal.textContent = `${absSpeed} KT EBB`;
-    }
-  }
-
-  // Update GDI-LDI bar walkability status
-  updateBarStatus(now, currentTideHeight, nowMs);
-}
-
-// Calculate GDI-LDI walkability window (< 4.0 ft limit) and update UI badge
-function updateBarStatus(now, currentTideHeight, nowMs) {
-  if (state.tideHeights.length === 0) return;
-  
-  const limit = 4.0;
-  const isOpen = currentTideHeight < limit;
-  
-  if (isOpen) {
-    // Hide sub-label in open state
-    elements.barStatusSub.style.display = 'none';
-    
-    // Find when it rises back above 4.0 ft (search up to 12.5 hours forward)
-    let closeDiffMs = null;
-    for (let t = 3 * 60 * 1000; t < 12.5 * 3600 * 1000; t += 3 * 60 * 1000) { // check every 3 minutes
-      const checkTimeMs = nowMs + t;
-      if (getTideHeightAtTime(checkTimeMs) >= limit) {
-        closeDiffMs = t;
-        break;
-      }
-    }
-    
-    const isRising = getTideHeightAtTime(nowMs + 5 * 60 * 1000) > currentTideHeight;
-    
-    if (isRising && closeDiffMs !== null) {
-      // If rising, replace 'OPEN' with remaining time
-      const totalMinRemaining = Math.round(closeDiffMs / (60 * 1000));
-      const hrs = Math.floor(totalMinRemaining / 60);
-      const mins = totalMinRemaining % 60;
-      const timeText = hrs > 0 ? `${hrs}h ${mins}m left` : `${mins}m left`;
-      elements.barStatusVal.textContent = timeText;
-      
-      // Apply warning colors to the badge itself
-      let statusClass = 'status-safe';
-      if (currentTideHeight >= 3.0) {
-        statusClass = 'status-danger';
-      } else if (currentTideHeight >= 2.0) {
-        statusClass = 'status-warning';
-      }
-      elements.barStatusVal.className = `bar-open ${statusClass}`;
-    } else {
-      // If falling/going down, just say OPEN
-      elements.barStatusVal.textContent = 'OPEN';
-      elements.barStatusVal.className = 'bar-open status-safe';
-    }
-  } else {
-    elements.barStatusVal.className = 'bar-closed';
-    elements.barStatusVal.textContent = 'CLOSED';
-    elements.barStatusSub.style.display = 'block';
-    
-    // Find when it drops below 4.0 ft (search up to 12.5 hours forward)
-    let openDiffMs = null;
-    for (let t = 3 * 60 * 1000; t < 12.5 * 3600 * 1000; t += 3 * 60 * 1000) {
-      const checkTimeMs = nowMs + t;
-      if (getTideHeightAtTime(checkTimeMs) < limit) {
-        openDiffMs = t;
-        break;
-      }
-    }
-    
-    if (openDiffMs !== null) {
-      const openTime = new Date(nowMs + openDiffMs);
-      const timeStr = openTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      elements.barStatusSub.textContent = `Opens at ${timeStr}`;
-    } else {
-      elements.barStatusSub.textContent = 'Closed today';
-    }
-    
-    elements.barStatusSub.className = 'status-closed';
-  }
-}
-
-// Calculate the SVG Y coordinate given a tide value
-function getSvgYCoordinate(value) {
-  if (state.tideHeights.length === 0) return 200;
-  
-  let minHeight = Infinity;
-  let maxHeight = -Infinity;
-  
-  state.tideHeights.forEach(pt => {
-    if (pt.value < minHeight) minHeight = pt.value;
-    if (pt.value > maxHeight) maxHeight = pt.value;
-  });
-  
-  if (maxHeight === minHeight) {
-    minHeight -= 1.0;
-    maxHeight += 1.0;
-  }
-  
-  let scaleMin = minHeight;
-  let scaleMax = maxHeight;
-  
-  if (state.settings.scale === 'fixed') {
-    scaleMin = -2.0;
-    scaleMax = 12.0;
-  }
-  
-  // Map value to Y coordinate (50px to 330px inside a 400px viewBox height)
-  // Higher tide values map to lower Y values
-  const rangeY = 280; // 330 - 50
-  const minY = 50;
-  const maxY = 330;
-  
-  const pct = Math.max(0, Math.min(1, (value - scaleMin) / (scaleMax - scaleMin)));
-  return maxY - (pct * rangeY);
-}
-
-// Generate simulated tide data (double sine wave approximation spanning 72 hours)
-function generateSimulatedTide() {
-  const now = new Date();
-  const heights = [];
-  
-  // Start from 24 hours ago, generate 72 hours of hourly data
-  const baseTimeMs = now.getTime() - 24 * 3600 * 1000;
-  
-  for (let h = 0; h < 72; h++) {
-    const checkTime = new Date(baseTimeMs + h * 3600 * 1000);
-    const relHour = h;
-    
-    const semiDiurnal = Math.sin((2 * Math.PI * (relHour - 3.0)) / 12.42);
-    const diurnal = 0.8 * Math.sin((2 * Math.PI * (relHour - 7.0)) / 24.84);
-    const value = 4.8 + 4.1 * semiDiurnal + diurnal;
-    
-    heights.push({
-      time: checkTime.toISOString(),
-      timeMs: checkTime.getTime(),
-      value: Math.round(value * 1000) / 1000
-    });
-  }
-  
-  state.stationName = 'PORTLAND, ME (SIMULATED)';
-  state.units = 'english';
-  state.datum = 'MLLW';
-  state.dateStr = now.toISOString().split('T')[0];
-  state.tideHeights = heights;
-  
-  // Generate simulated extremes
-  const extremes = [];
-  for (let i = 1; i < heights.length - 1; i++) {
-    const prev = heights[i - 1].value;
-    const curr = heights[i].value;
-    const next = heights[i + 1].value;
-    if (curr > prev && curr > next) {
-      extremes.push({ time: heights[i].time, timeMs: heights[i].timeMs, value: curr, type: 'H' });
-    }
-    if (curr < prev && curr < next) {
-      extremes.push({ time: heights[i].time, timeMs: heights[i].timeMs, value: curr, type: 'L' });
-    }
-  }
-  state.tideExtremes = extremes;
-  
-  // Generate simulated currents predictions (phase-shifted from tide heights by 3.1 hours)
-  const currents = [];
-  for (let h = 0; h < 72; h++) {
-    const checkTime = new Date(baseTimeMs + h * 3600 * 1000);
-    const relHour = h;
-    const semiDiurnal = Math.sin((2 * Math.PI * (relHour - 3.0 - 3.1)) / 12.42);
-    const value = 1.5 * semiDiurnal;
-    currents.push({
-      time: checkTime.toISOString(),
-      timeMs: checkTime.getTime(),
-      value: Math.round(value * 100) / 100
-    });
-  }
-  state.currentPredictions = currents;
-  
-  state.waterTemp = 59.5;
-  state.marineForecast = [
-    { name: "THIS AFTERNOON", text: "SW winds around 10 kt. Seas around 2 ft." },
-    { name: "TONIGHT", text: "W winds 5 to 10 kt. Seas around 2 ft." },
-    { name: "SATURDAY", text: "W winds around 5 kt, becoming NW in the afternoon. Seas around 2 ft." },
-    { name: "SATURDAY NIGHT", text: "NW winds 5 to 10 kt. Seas around 2 ft." }
-  ];
-  state.lastUpdated = now.toISOString();
-  state.connectionOnline = false;
-}
-
-// Load data from JSON or simulation
 async function loadData() {
-  if (state.settings.source === 'sim') {
-    generateSimulatedTide();
-    updateUI();
-    return;
-  }
-  
-  try {
-    const response = await fetch('tide_data.json', { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    
-    state.stationId = data.station_id;
-    state.stationName = data.station_name.toUpperCase();
-    state.dateStr = data.date;
-    state.tideHeights = data.tide_heights.map(pt => ({
-      ...pt,
-      timeMs: new Date(pt.time).getTime()
-    }));
-    state.tideExtremes = (data.tide_extremes || []).map(pt => ({
-      ...pt,
-      timeMs: new Date(pt.time).getTime()
-    }));
-    state.currentPredictions = (data.current_predictions || []).map(pt => ({
-      ...pt,
-      timeMs: new Date(pt.time).getTime()
-    }));
-    state.units = data.units || 'english';
-    state.datum = data.datum || 'MLLW';
-    state.waterTemp = data.water_temp;
-    state.marineForecast = data.marine_forecast || [];
-    state.lastUpdated = data.last_updated;
-    state.connectionOnline = true;
-    
-    console.log('Tide data loaded successfully for:', state.stationName);
-  } catch (error) {
-    console.warn('Failed to load live tide data. Falling back to simulation.', error);
-    generateSimulatedTide();
-    state.connectionOnline = false;
-  }
-  
-  updateUI();
+	try {
+		const data = await fetchTideData();
+		processTideData(data);
+		updateUI();
+	} catch (error) {
+		console.error("Failed to load live tide data for Tidelog:", error);
+	}
 }
 
-// Refresh UI Elements
+async function fetchTideData() {
+	const response = await fetch("/tide_data.json", { cache: "no-store" });
+	if (!response.ok) {
+		throw new Error(`HTTP error! status: ${response.status}`);
+	}
+	return await response.json();
+}
+
+function processTideData(data) {
+	const parseTime = (pt) => ({ ...pt, timeMs: new Date(pt.time).getTime() });
+
+	state.stationId = data.station_id;
+	state.stationName = data.station_name.toUpperCase();
+	state.dateStr = data.date;
+	state.tideHeights = (data.tide_heights || []).map(parseTime);
+	state.tideExtremes = (data.tide_extremes || []).map(parseTime);
+	state.currentPredictions = (data.current_predictions || []).map(parseTime);
+
+	state.units = data.units || "english";
+	state.datum = data.datum || "MLLW";
+	state.waterTemp = data.water_temp;
+	state.marineForecast = data.marine_forecast || [];
+	state.astronomical_data = data.astronomical_data || {};
+	state.lastUpdated = data.last_updated;
+}
+
+// --- UI Orchestration ---
+
 function updateUI() {
-  elements.stationName.textContent = state.stationName;
-  elements.currentTideUnit.textContent = state.units === 'english' ? 'FT' : 'M';
-  
-  if (state.connectionOnline && state.settings.source === 'live') {
-    elements.pulseDot.className = 'pulse-dot';
-    elements.pulseDot.title = 'NOAA Connected';
-  } else {
-    elements.pulseDot.className = 'pulse-dot offline';
-    elements.pulseDot.title = state.settings.source === 'sim' ? 'Simulated Offline Demo' : 'Connection Offline (Simulated)';
-  }
-  
-  if (state.waterTemp !== undefined && state.waterTemp !== null) {
-    const tempUnit = state.units === 'english' ? '°F' : '°C';
-    elements.waterTempVal.textContent = `${state.waterTemp.toFixed(1)}${tempUnit}`;
-    elements.waterTempContainer.style.display = 'flex';
-  } else {
-    elements.waterTempContainer.style.display = 'none';
-  }
+	elements.stationName.textContent = state.stationName;
+	elements.metaStationId.textContent = state.stationId;
+	elements.currentTideUnit.textContent = state.units === "english" ? "FT" : "M";
 
-  if (state.lastUpdated) {
-    const updatedDate = new Date(state.lastUpdated);
-    const timeStr = updatedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    elements.lastUpdatedText.textContent = `UPDATED: ${timeStr}`;
-  } else {
-    elements.lastUpdatedText.textContent = 'UPDATED: --';
-  }
-  
-  // Update NWS Marine Forecast Header Ticker
-  elements.forecastScrollWrapper.innerHTML = '';
-  if (state.marineForecast && state.marineForecast.length > 0) {
-    elements.forecastHeaderContainer.style.display = 'flex';
-    
-    // Slice up to 4 periods to keep it focused on the immediate forecast
-    const periodsToRender = state.marineForecast.slice(0, 4);
-    
-    periodsToRender.forEach(period => {
-      const card = document.createElement('div');
-      card.className = 'forecast-ticker-card';
-      
-      const pName = document.createElement('span');
-      pName.className = 'forecast-ticker-period';
-      pName.textContent = period.name;
-      
-      const pText = document.createElement('span');
-      pText.className = 'forecast-ticker-text';
-      pText.textContent = period.text;
-      
-      card.appendChild(pName);
-      card.appendChild(pText);
-      elements.forecastScrollWrapper.appendChild(card);
-    });
-    
-    startForecastTickerAnimation(periodsToRender.length);
-  } else {
-    elements.forecastHeaderContainer.style.display = 'none';
-  }
+	if (state.lastUpdated) {
+		const updatedDate = new Date(state.lastUpdated);
+		elements.lastUpdatedText.textContent = `UPDATED: ${updatedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+	}
 
-  renderWavePlot();
-  updateTime(); // Force time update
+	drawTidelogGrid();
+	renderExtremes();
+	renderForecast();
+	updateAstronomicalDetails();
+	renderTidelogGraph();
+	updateClock();
 }
 
-// Render vector SVG wave line, SVG area fill, and callout overlays
-function renderWavePlot() {
-  if (state.tideHeights.length === 0) return;
-  
-  const now = new Date();
-  const nowMs = now.getTime();
-  const startMs = nowMs - 12 * 3600 * 1000; // -12h
-  const endMs = nowMs + 24 * 3600 * 1000;  // +24h
-  const durationMs = 36 * 3600 * 1000;
-  
-  // Save the chart start time to state so the real-time clock tracker can align to it
-  state.plotStartMs = startMs;
-  
-  // Step 1: Draw the smooth tide curve over the 36-hour window
-  const steps = 240;
-  let strokePathD = '';
-  let walkablePathD = '';
-  let warningPathD = '';
-  let dangerPathD = '';
-  
-  let prevX = null;
-  let prevY = null;
-  let prevType = 'none';
-  
-  for (let i = 0; i <= steps; i++) {
-    const tMs = startMs + (i / steps) * durationMs;
-    const x = (i / steps) * 1000;
-    const value = getTideHeightAtTime(tMs);
-    const y = getSvgYCoordinate(value);
-    
-    if (i === 0) {
-      strokePathD += `M ${x.toFixed(1)} ${y.toFixed(1)}`;
-    } else {
-      strokePathD += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
-    }
-    
-    // Determine path type (< 4.0 ft with warning colors when rising)
-    let currentType = 'none';
-    if (value < 4.0) {
-      // Check slope of tide (5 minutes ahead) to see if rising
-      const isRising = getTideHeightAtTime(tMs + 5 * 60 * 1000) > value;
-      if (isRising) {
-        if (value >= 3.0) {
-          currentType = 'danger';
-        } else if (value >= 2.0) {
-          currentType = 'warning';
-        } else {
-          currentType = 'walkable';
-        }
-      } else {
-        currentType = 'walkable';
-      }
-    }
-    
-    // Construct paths with seamless bridging transitions
-    if (currentType !== 'none') {
-      if (currentType === 'walkable') {
-        if (prevType !== 'walkable' && prevX !== null) {
-          walkablePathD += ` M ${prevX.toFixed(1)} ${prevY.toFixed(1)} L ${x.toFixed(1)} ${y.toFixed(1)}`;
-        } else if (prevType !== 'walkable') {
-          walkablePathD += ` M ${x.toFixed(1)} ${y.toFixed(1)}`;
-        } else {
-          walkablePathD += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
-        }
-      } else if (currentType === 'warning') {
-        if (prevType !== 'warning' && prevX !== null) {
-          warningPathD += ` M ${prevX.toFixed(1)} ${prevY.toFixed(1)} L ${x.toFixed(1)} ${y.toFixed(1)}`;
-        } else if (prevType !== 'warning') {
-          warningPathD += ` M ${x.toFixed(1)} ${y.toFixed(1)}`;
-        } else {
-          warningPathD += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
-        }
-      } else if (currentType === 'danger') {
-        if (prevType !== 'danger' && prevX !== null) {
-          dangerPathD += ` M ${prevX.toFixed(1)} ${prevY.toFixed(1)} L ${x.toFixed(1)} ${y.toFixed(1)}`;
-        } else if (prevType !== 'danger') {
-          dangerPathD += ` M ${x.toFixed(1)} ${y.toFixed(1)}`;
-        } else {
-          dangerPathD += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
-        }
-      }
-    }
-    
-    prevX = x;
-    prevY = y;
-    prevType = currentType;
-  }
-  
-  // Set stroke paths
-  elements.waveStrokePath.setAttribute('d', strokePathD);
-  elements.waveWalkablePath.setAttribute('d', walkablePathD);
-  elements.waveWarningPath.setAttribute('d', warningPathD);
-  elements.waveDangerPath.setAttribute('d', dangerPathD);
-  
-  // Set area fill path definition (closed at bottom-right 1000,400 and bottom-left 0,400)
-  const fillPathD = strokePathD + ' L 1000 400 L 0 400 Z';
-  elements.waveFillPath.setAttribute('d', fillPathD);
-  
-  // Step 2: Filter Extrema Peaks & Troughs inside the displayed 36-hour window
-  const highs = [];
-  const lows = [];
-  
-  const displayedExtremes = (state.tideExtremes || []).filter(pt => {
-    return pt.timeMs >= startMs && pt.timeMs <= endMs;
-  });
-  
-  displayedExtremes.forEach(pt => {
-    if (pt.type === 'H' || pt.type === 'High') {
-      highs.push({ val: pt.value, timeMs: pt.timeMs });
-    } else if (pt.type === 'L' || pt.type === 'Low') {
-      lows.push({ val: pt.value, timeMs: pt.timeMs });
-    }
-  });
-  
-  // Step 3: Draw HTML overlay tags for peaks & troughs
-  elements.tideOverlayLabels.innerHTML = '';
-  const suffix = state.units === 'english' ? 'FT' : 'M';
-  
-  // Step 3a: Draw Day Boundary Visuals (Midnight lines and next-day shading)
-  const tempDate = new Date(startMs);
-  tempDate.setHours(0, 0, 0, 0); // Start at midnight of the day startMs falls in
-  
-  while (tempDate.getTime() <= endMs) {
-    const midnightMs = tempDate.getTime();
-    if (midnightMs >= startMs) {
-      const xPct = ((midnightMs - startMs) / durationMs) * 100;
-      
-      // Calculate non-overlapping width for the shading block
-      const nextMidnightMs = midnightMs + 24 * 3600 * 1000;
-      const endOfShadingMs = Math.min(nextMidnightMs, endMs);
-      const widthPct = ((endOfShadingMs - midnightMs) / durationMs) * 100;
-      
-      // 1. Shading overlay for the next day
-      const shading = document.createElement('div');
-      shading.className = 'day-shading-tomorrow';
-      shading.style.left = `${xPct}%`;
-      shading.style.width = `${widthPct}%`;
-      elements.tideOverlayLabels.appendChild(shading);
-      
-      // 2. Vertical line at midnight
-      const line = document.createElement('div');
-      line.className = 'day-boundary-line';
-      line.style.left = `${xPct}%`;
-      elements.tideOverlayLabels.appendChild(line);
-    }
-    // Advance by 1 day
-    tempDate.setDate(tempDate.getDate() + 1);
-  }
-  
-  const formatTime = (timeMs) => {
-    const dateObj = new Date(timeMs);
-    let hrs = dateObj.getHours();
-    const ampm = hrs >= 12 ? 'PM' : 'AM';
-    hrs = hrs % 12;
-    hrs = hrs ? hrs : 12;
-    const mins = String(dateObj.getMinutes()).padStart(2, '0');
-    return `${hrs}:${mins} ${ampm}`;
-  };
-  
-  // Render High Tide tags
-  highs.forEach(high => {
-    const x = ((high.timeMs - startMs) / durationMs) * 1000;
-    const y = getSvgYCoordinate(high.val);
-    
-    const label = document.createElement('div');
-    label.className = 'tide-callout high';
-    label.style.left = `${(x / 1000) * 100}%`;
-    label.style.top = `${((y - 30) / 400) * 100}%`;
-    
-    label.innerHTML = `
-      <span class="tide-callout-text">H: +${high.val.toFixed(1)} ${suffix}</span>
-      <span class="tide-callout-sub">${formatTime(high.timeMs)}</span>
-    `;
-    elements.tideOverlayLabels.appendChild(label);
-  });
-  
-  // Render Low Tide tags
-  lows.forEach(low => {
-    const x = ((low.timeMs - startMs) / durationMs) * 1000;
-    const y = getSvgYCoordinate(low.val);
-    
-    const label = document.createElement('div');
-    label.className = 'tide-callout low';
-    label.style.left = `${(x / 1000) * 100}%`;
-    label.style.top = `${((y + 30) / 400) * 100}%`;
-    
-    label.innerHTML = `
-      <span class="tide-callout-text">L: ${low.val.toFixed(1)} ${suffix}</span>
-      <span class="tide-callout-sub">${formatTime(low.timeMs)}</span>
-    `;
-    elements.tideOverlayLabels.appendChild(label);
-  });
-  
-  // Step 4: Dynamically generate absolute timeline clock ticks every 4 hours relative to startMs
-  elements.timelineLabels.innerHTML = '';
-  const startHourTime = new Date(startMs);
-  const hour = startHourTime.getHours();
-  const alignedHour = Math.floor(hour / 4) * 4;
-  startHourTime.setHours(alignedHour, 0, 0, 0);
-  const alignedStartMs = startHourTime.getTime();
-  
-  for (let tMs = alignedStartMs; tMs <= endMs; tMs += 4 * 3600 * 1000) {
-    if (tMs < startMs) continue;
-    
-    const xPct = ((tMs - startMs) / durationMs) * 100;
-    const dateObj = new Date(tMs);
-    
-    let hrs = dateObj.getHours();
-    const ampm = hrs >= 12 ? 'p' : 'a';
-    hrs = hrs % 12;
-    hrs = hrs ? hrs : 12;
-    
-    const isNow = Math.abs(tMs - nowMs) < 1.5 * 3600 * 1000;
-    const isMidnight = dateObj.getHours() === 0;
-    
-    const tickDiv = document.createElement('div');
-    tickDiv.className = 'time-tick';
-    
-    if (isNow && !elements.timelineLabels.querySelector('.tick-now')) {
-      tickDiv.textContent = 'NOW';
-      tickDiv.classList.add('tick-now');
-      tickDiv.style.left = '33.33%';
-    } else if (isMidnight) {
-      tickDiv.classList.add('day-change');
-      
-      const timeSpan = document.createElement('div');
-      timeSpan.textContent = '12a';
-      tickDiv.appendChild(timeSpan);
-      
-      const daySpan = document.createElement('div');
-      daySpan.className = 'tick-day-label';
-      const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
-      daySpan.textContent = dateObj.toLocaleDateString('en-US', dateOptions).toUpperCase();
-      tickDiv.appendChild(daySpan);
-      
-      tickDiv.style.left = `${xPct}%`;
-    } else {
-      tickDiv.textContent = `${hrs}${ampm}`;
-      tickDiv.style.left = `${xPct}%`;
-    }
-    
-    tickDiv.style.position = 'absolute';
-    tickDiv.style.transform = 'translateX(-50%)';
-    elements.timelineLabels.appendChild(tickDiv);
-  }
+function updateClock() {
+	const now = new Date();
+	updateClockHeader(now);
+	updateDateHeader();
+	updateNowTracker(now);
 }
 
-// Start sliding marquee timer for forecast ticker (clears and sets vertical offset)
-let tickerIndex = 0;
-function startForecastTickerAnimation(totalItems) {
-  if (window.forecastTickerInterval) {
-    clearInterval(window.forecastTickerInterval);
-  }
-  
-  tickerIndex = 0;
-  elements.forecastScrollWrapper.style.transform = 'translateY(0)';
-  
-  if (totalItems <= 1) return;
-  
-  window.forecastTickerInterval = setInterval(() => {
-    tickerIndex = (tickerIndex + 1) % totalItems;
-    elements.forecastScrollWrapper.style.transform = `translateY(-${tickerIndex * 60}px)`;
-  }, 6000);
+function updateClockHeader(now) {
+	let hrs = now.getHours();
+	const mins = String(now.getMinutes()).padStart(2, "0");
+	const ampm = hrs >= 12 ? "PM" : "AM";
+	hrs = hrs % 12 || 12;
+	elements.digitalTime.innerHTML = `${hrs}:${mins}<span>${ampm}</span>`;
 }
 
-// Start application when page loads
-window.addEventListener('DOMContentLoaded', init);
+function updateDateHeader() {
+	const displayDate = new Date();
+	displayDate.setDate(displayDate.getDate() + state.selectedDayOffset);
+	const options = {
+		weekday: "long",
+		month: "long",
+		day: "numeric",
+		year: "numeric",
+	};
+	elements.digitalDate.textContent = displayDate
+		.toLocaleDateString("en-US", options)
+		.toUpperCase();
+}
+
+function renderTidelogGraph() {
+	const [startMs, endMs] = getTargetDayRange();
+	const duration = 24 * 3600 * 1000;
+	const dayAstro = getAstronomicalDataForSelectedDay();
+
+	renderSunBackground(startMs, duration, dayAstro);
+	renderLunarTransit(startMs, duration, dayAstro);
+	renderTideWave(startMs, duration);
+	renderTideOverlayLabels(startMs, endMs);
+	renderCurrentsTimeline(startMs, endMs);
+}
+
+// --- Grid & Sidebars ---
+
+function drawTidelogGrid() {
+	elements.tidelogGridLines.innerHTML = "";
+
+	for (let h = 0; h <= 24; h += 2) {
+		const x = (h / 24) * 1000;
+		const isMajor = h === 12 || h === 0 || h === 24;
+
+		const line = createSvgElement("line", {
+			x1: x,
+			y1: 0,
+			x2: x,
+			y2: 400,
+			class: isMajor ? "tidelog-grid-line major" : "tidelog-grid-line",
+		});
+
+		const label =
+			h === 0 || h === 24
+				? "12 AM"
+				: h === 12
+					? "NOON"
+					: h < 12
+						? `${h} AM`
+						: `${h - 12} PM`;
+		const txt = createSvgElement(
+			"text",
+			{
+				x: x,
+				y: 385,
+				class: isMajor ? "grid-time-label major" : "grid-time-label",
+			},
+			label,
+		);
+
+		elements.tidelogGridLines.appendChild(line);
+		elements.tidelogGridLines.appendChild(txt);
+	}
+}
+
+function renderExtremes() {
+	if (!elements.extremesList) return;
+	elements.extremesList.innerHTML = "";
+	const [startMs, endMs] = getTargetDayRange();
+
+	const dayExtremes = state.tideExtremes.filter(
+		(pt) => pt.timeMs >= startMs && pt.timeMs <= endMs,
+	);
+
+	if (dayExtremes.length === 0) {
+		elements.extremesList.innerHTML =
+			'<div class="data-item placeholder">No extremes today</div>';
+		return;
+	}
+
+	dayExtremes.forEach((pt) => {
+		const timeStr = new Date(pt.timeMs).toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+		const isHigh = pt.type === "H";
+
+		const row = document.createElement("div");
+		row.className = "data-item";
+		row.innerHTML = `
+			<span class="data-item-label">${isHigh ? "High" : "Low"} (${timeStr})</span>
+			<span class="data-item-val" style="color: ${isHigh ? "var(--accent-color)" : "var(--text-color)"}">
+				${isHigh ? "+" : ""}${pt.value.toFixed(1)} ${state.units === "english" ? "FT" : "M"}
+			</span>
+		`;
+		elements.extremesList.appendChild(row);
+	});
+}
+
+// --- Meteorological Helper Data & Parsers ---
+const windAngles = {
+	N: 180,
+	NNE: 202.5,
+	NE: 225,
+	ENE: 247.5,
+	E: 270,
+	ESE: 292.5,
+	SE: 315,
+	SSE: 337.5,
+	S: 0,
+	SSW: 22.5,
+	SW: 45,
+	WSW: 67.5,
+	W: 90,
+	WNW: 112.5,
+	NW: 135,
+	NNW: 157.5,
+	VAR: null,
+};
+
+function parseWind(text) {
+	let dir = "VAR";
+	let speed = "--";
+	let gusts = null;
+
+	const dirMatch = text.match(/\b([N|S|E|W|NE|NW|SE|SW]+)\s+winds\b/i);
+	if (dirMatch) {
+		dir = dirMatch[1].toUpperCase();
+	} else if (text.toLowerCase().includes("variable")) {
+		dir = "VAR";
+	}
+
+	const speedRangeMatch = text.match(/(\d+)\s*to\s*(\d+)\s*kt\b/i);
+	const speedAroundMatch = text.match(/around\s+(\d+)\s*kt\b/i);
+	if (speedRangeMatch) {
+		speed = `${speedRangeMatch[1]}-${speedRangeMatch[2]}`;
+	} else if (speedAroundMatch) {
+		speed = `${speedAroundMatch[1]}`;
+	}
+
+	const gustsMatch = text.match(/gusts\s+up\s+to\s+(\d+)\s*kt\b/i);
+	if (gustsMatch) {
+		gusts = parseInt(gustsMatch[1], 10);
+	}
+
+	return { dir, speed, gusts };
+}
+
+function parseSeas(text) {
+	const rangeMatch = text.match(/Seas\s+(\d+)\s*to\s*(\d+)\s*ft\b/i);
+	if (rangeMatch) {
+		return `${rangeMatch[1]}-${rangeMatch[2]} FT`;
+	}
+	const lessMatch = text.match(/Seas\s+(\d+)\s*foot\s+or\s+less\b/i);
+	if (lessMatch) {
+		return `≤${lessMatch[1]} FT`;
+	}
+	const aroundMatch = text.match(/Seas\s+around\s+(\d+)\s*ft\b/i);
+	if (aroundMatch) {
+		return `~${aroundMatch[1]} FT`;
+	}
+	return "--";
+}
+
+function getWindArrowSvg(dir, speedObj) {
+	const angle = windAngles[dir];
+	const isWarning = speedObj.gusts && speedObj.gusts >= 20;
+	const isCaution =
+		!isWarning &&
+		parseInt(speedObj.speed.split("-")[1] || speedObj.speed, 10) >= 15;
+	const color = isWarning ? "#f43f5e" : isCaution ? "#f59e0b" : "#9ca3af";
+
+	if (angle === null || angle === undefined || dir === "VAR") {
+		return `
+			<svg width="14" height="14" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle;">
+				<circle cx="12" cy="12" r="6" fill="none" stroke="${color}" stroke-width="3" />
+				<circle cx="12" cy="12" r="2" fill="${color}" />
+			</svg>
+		`;
+	}
+
+	return `
+		<svg class="weather-wind-arrow" width="14" height="14" viewBox="0 0 24 24" style="transform: rotate(${angle}deg); display: inline-block; vertical-align: middle;">
+			<path d="M12 2L4 22L12 17L20 22L12 2Z" fill="${color}" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" />
+		</svg>
+	`;
+}
+
+function getWaveSvg(seasText) {
+	let pathD = "M 0 10 Q 15 8, 30 10 T 60 10"; // Default calm
+	let color = "#06b6d4";
+
+	if (
+		seasText.includes("2 to 3") ||
+		seasText.includes("2 to 4") ||
+		seasText.includes("3 to 5") ||
+		seasText.includes("around 2") ||
+		seasText.includes("around 3")
+	) {
+		pathD = "M 0 10 Q 10 5, 20 10 T 40 10 T 60 10";
+		color = "#f59e0b";
+	}
+
+	if (
+		seasText.includes("4 to") ||
+		seasText.includes("5 to") ||
+		seasText.includes("rough") ||
+		seasText.includes("4 ft") ||
+		seasText.includes("5 ft")
+	) {
+		pathD = "M 0 12 L 8 4 L 16 12 L 24 4 L 32 12 L 40 4 L 48 12 L 56 4 L 60 12";
+		color = "#f43f5e";
+	}
+
+	return `
+		<svg width="45" height="12" viewBox="0 0 60 16" style="overflow: visible; display: inline-block; vertical-align: middle;">
+			<path d="${pathD}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+		</svg>
+	`;
+}
+
+function getSeverityClass(speedObj, seasText) {
+	let maxSpeed = 0;
+	if (speedObj.speed.includes("-")) {
+		maxSpeed = parseInt(speedObj.speed.split("-")[1], 10);
+	} else if (speedObj.speed !== "--") {
+		maxSpeed = parseInt(speedObj.speed, 10);
+	}
+
+	const maxGusts = speedObj.gusts || 0;
+
+	let maxSeas = 0;
+	const seasRangeMatch = seasText.match(/(\d+)\s*to\s*(\d+)/);
+	if (seasRangeMatch) {
+		maxSeas = parseInt(seasRangeMatch[2], 10);
+	} else {
+		const singleDigitMatch = seasText.match(/(\d+)/);
+		if (singleDigitMatch) {
+			maxSeas = parseInt(singleDigitMatch[1], 10);
+		}
+	}
+
+	if (maxSpeed >= 15 || maxGusts >= 20 || maxSeas >= 4) {
+		return "warning";
+	}
+	if (maxSpeed >= 10 || maxSeas >= 2) {
+		return "caution";
+	}
+	return "normal";
+}
+
+function getForecastPeriodsForSelectedDay() {
+	const targetDate = new Date();
+	targetDate.setDate(targetDate.getDate() + state.selectedDayOffset);
+
+	const dayOfWeekStr = targetDate
+		.toLocaleDateString("en-US", { weekday: "short" })
+		.toUpperCase(); // e.g. "MON", "TUE"
+
+	let dayPeriod = null;
+	let nightPeriod = null;
+
+	if (state.selectedDayOffset === 0) {
+		dayPeriod = state.marineForecast.find(
+			(p) => p.name === "TODAY" || p.name === "THIS DAY",
+		);
+		nightPeriod = state.marineForecast.find((p) => p.name === "TONIGHT");
+
+		// If today's daytime forecast has passed (it's evening), fall back
+		if (!dayPeriod && state.marineForecast.length > 0) {
+			dayPeriod = state.marineForecast[0]; // first available
+		}
+		if (!nightPeriod && state.marineForecast.length > 1) {
+			nightPeriod = state.marineForecast[1];
+		}
+	} else {
+		dayPeriod = state.marineForecast.find(
+			(p) => p.name === dayOfWeekStr || p.name === `${dayOfWeekStr}DAY`,
+		);
+		nightPeriod = state.marineForecast.find(
+			(p) =>
+				p.name === `${dayOfWeekStr} NIGHT` ||
+				p.name === `${dayOfWeekStr}Y NIGHT`,
+		);
+	}
+
+	return { dayPeriod, nightPeriod };
+}
+
+function renderForecast() {
+	if (!elements.weatherTimelineBar) return;
+	elements.weatherTimelineBar.innerHTML = "";
+
+	if (state.marineForecast.length === 0) {
+		elements.weatherTimelineBar.innerHTML =
+			'<div class="weather-timeline-block" style="flex: 1;"><div class="placeholder">No forecast available</div></div>';
+		return;
+	}
+
+	const { dayPeriod, nightPeriod } = getForecastPeriodsForSelectedDay();
+
+	const activeDayPeriod = dayPeriod || {
+		name: "Day",
+		text: "Forecast not available.",
+	};
+	const activeNightPeriod = nightPeriod || {
+		name: "Night",
+		text: "Forecast not available.",
+	};
+
+	// Parse parameters
+	const dayWind = parseWind(activeDayPeriod.text);
+	const daySeas = parseSeas(activeDayPeriod.text);
+	const daySeverity = getSeverityClass(dayWind, daySeas);
+
+	const nightWind = parseWind(activeNightPeriod.text);
+	const nightSeas = parseSeas(activeNightPeriod.text);
+	const nightSeverity = getSeverityClass(nightWind, nightSeas);
+
+	// Create 3 blocks representing 24 hours:
+	// 00:00 - 06:00 (Night, 25% width), 06:00 - 18:00 (Day, 50% width), 18:00 - 24:00 (Night, 25% width)
+	const blocks = [
+		{
+			title: "Early AM (Night)",
+			width: "25%",
+			wind: nightWind,
+			seas: nightSeas,
+			severity: nightSeverity,
+			text: activeNightPeriod.text,
+		},
+		{
+			title: "Daytime",
+			width: "50%",
+			wind: dayWind,
+			seas: daySeas,
+			severity: daySeverity,
+			text: activeDayPeriod.text,
+		},
+		{
+			title: "Late PM (Night)",
+			width: "25%",
+			wind: nightWind,
+			seas: nightSeas,
+			severity: nightSeverity,
+			text: activeNightPeriod.text,
+		},
+	];
+
+	blocks.forEach((block) => {
+		const div = document.createElement("div");
+		div.className = `weather-timeline-block ${block.severity}`;
+		div.style.width = block.width;
+
+		const gustsHtml = block.wind.gusts
+			? `<span class="weather-wind-gusts">G ${block.wind.gusts}</span>`
+			: "";
+
+		div.innerHTML = `
+			<div class="weather-block-title">${block.title}</div>
+			<div class="weather-block-data">
+				<div class="weather-block-wind">
+					${getWindArrowSvg(block.wind.dir, block.wind)}
+					<span class="weather-wind-dir">${block.wind.dir}</span>
+					<span class="weather-wind-speed">${block.wind.speed} KT</span>
+					${gustsHtml}
+				</div>
+				<div class="weather-block-seas">
+					${getWaveSvg(block.seas)}
+					<span class="weather-seas-val">${block.seas}</span>
+				</div>
+			</div>
+		`;
+
+		elements.weatherTimelineBar.appendChild(div);
+	});
+}
+
+// --- Live Trackers ---
+
+function updateNowTracker(now) {
+	const nowMs = now.getTime();
+	const [startMs, endMs] = getTargetDayRange();
+	const duration = 24 * 3600 * 1000;
+
+	if (state.selectedDayOffset === 0 && nowMs >= startMs && nowMs <= endMs) {
+		elements.nowMarkerLine.style.display = "block";
+		elements.nowMarkerDot.style.display = "block";
+
+		const xPct = ((nowMs - startMs) / duration) * 100;
+		elements.nowMarkerLine.setAttribute("x1", xPct * 10);
+		elements.nowMarkerLine.setAttribute("x2", xPct * 10);
+
+		const currentHeight = getTideHeightAtTime(nowMs);
+		const yPct = (getSvgYCoordinate(currentHeight) / 400) * 100;
+
+		elements.nowMarkerDot.style.left = `${xPct}%`;
+		elements.nowMarkerDot.style.top = `${yPct}%`;
+
+		elements.currentTideVal.textContent = `${currentHeight >= 0 ? "+" : ""}${currentHeight.toFixed(1)}`;
+
+		const isRising = getTideHeightAtTime(nowMs + 5 * 60 * 1000) > currentHeight;
+		elements.currentTideSlope.textContent = isRising ? "↑" : "↓";
+		elements.currentTideSlope.style.color = isRising
+			? "var(--accent-color)"
+			: "var(--text-muted)";
+
+		const currentSpeed = getCurrentSpeedAtTime(nowMs);
+		if (Math.abs(currentSpeed) < 0.15) {
+			elements.currentStatusVal.textContent = "SLACK";
+			// Match Slack legend color
+			elements.currentStatusVal.style.color = "#64748b";
+		} else {
+			elements.currentStatusVal.textContent = `${Math.abs(currentSpeed).toFixed(1)} KT ${currentSpeed > 0 ? "FLOOD" : "EBB"}`;
+			// Cyan for Flood, Pink for Ebb to match the legend
+			elements.currentStatusVal.style.color =
+				currentSpeed > 0 ? "#06b6d4" : "#ec4899";
+		}
+	} else {
+		elements.nowMarkerLine.style.display = "none";
+		elements.nowMarkerDot.style.display = "none";
+		elements.currentTideVal.textContent = "--";
+		elements.currentTideSlope.textContent = "";
+
+		// Reset text and color when out of range
+		elements.currentStatusVal.textContent = "--";
+		elements.currentStatusVal.style.color = "";
+	}
+}
+
+function renderTideOverlayLabels(startMs, endMs) {
+	elements.tideOverlayLabels.innerHTML = "";
+
+	const dayExtremes = state.tideExtremes.filter(
+		(pt) => pt.timeMs >= startMs && pt.timeMs <= endMs,
+	);
+
+	dayExtremes.forEach((pt) => {
+		const xPct = ((pt.timeMs - startMs) / (24 * 3600 * 1000)) * 100;
+		const yPct = (getSvgYCoordinate(pt.value) / 400) * 100;
+		const isHigh = pt.type === "H";
+
+		const div = document.createElement("div");
+		div.className = `tide-callout ${isHigh ? "high" : "low"}`;
+		div.style.left = `${xPct}%`;
+		div.style.top = `calc(${yPct}% + ${isHigh ? -22 : 22}px)`;
+
+		const timeStr = new Date(pt.timeMs).toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+
+		div.innerHTML = `
+			<div class="tide-callout-text">${isHigh ? "+" : ""}${pt.value.toFixed(1)} FT</div>
+			<div class="tide-callout-sub">${timeStr}</div>
+		`;
+		elements.tideOverlayLabels.appendChild(div);
+	});
+}
+
+// --- Currents Rendering ---
+
+function renderCurrentsTimeline(startMs, endMs) {
+	elements.currentsEventsWrapper.innerHTML = "";
+	if (state.currentPredictions.length === 0) return;
+
+	const dayPredictions = state.currentPredictions.filter(
+		(pt) =>
+			pt.timeMs >= startMs - 2 * 3600 * 1000 &&
+			pt.timeMs <= endMs + 2 * 3600 * 1000,
+	);
+
+	if (dayPredictions.length === 0) return;
+
+	const duration = 24 * 3600 * 1000;
+	const maxKt = calculateMaxCurrentsVelocity(dayPredictions);
+
+	const getVelocityY = (kt) => {
+		const pct = Math.max(-1, Math.min(1, kt / maxKt));
+		return 40 - pct * 35;
+	};
+
+	renderCurrentsPaths(startMs, duration, getVelocityY);
+
+	const events = detectCurrentsEvents(dayPredictions, startMs, endMs);
+	renderCurrentsEventLabels(events, startMs, duration, getVelocityY);
+}
+
+function calculateMaxCurrentsVelocity(predictions) {
+	let maxAbsValue = 0;
+	predictions.forEach((pt) => {
+		const absVal = Math.abs(pt.value);
+		if (absVal > maxAbsValue) maxAbsValue = absVal;
+	});
+	return Math.max(1, Math.ceil(maxAbsValue));
+}
+
+function renderCurrentsPaths(startMs, duration, getVelocityY) {
+	const steps = 144;
+	let mainStrokeD = "";
+	let floodFillD = "M 0 40";
+	let ebbFillD = "M 0 40";
+
+	for (let i = 0; i <= steps; i++) {
+		const tMs = startMs + (i / steps) * duration;
+		const x = (i / steps) * 1000;
+		const ktVal = getCurrentSpeedAtTime(tMs);
+		const y = getVelocityY(ktVal);
+
+		mainStrokeD +=
+			i === 0
+				? `M ${x.toFixed(1)} ${y.toFixed(1)}`
+				: ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+
+		if (ktVal >= 0) {
+			floodFillD += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+			ebbFillD += ` L ${x.toFixed(1)} 40`;
+		} else {
+			floodFillD += ` L ${x.toFixed(1)} 40`;
+			ebbFillD += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+		}
+	}
+
+	if (elements.currentsStrokePath)
+		elements.currentsStrokePath.setAttribute("d", mainStrokeD);
+	if (elements.currentsFloodPath)
+		elements.currentsFloodPath.setAttribute("d", `${floodFillD} L 1000 40 Z`);
+	if (elements.currentsEbbPath)
+		elements.currentsEbbPath.setAttribute("d", `${ebbFillD} L 1000 40 Z`);
+}
+
+function detectCurrentsEvents(predictions, startMs, endMs) {
+	const events = [];
+
+	// Detect Slack Water (zero-crossings)
+	for (let i = 0; i < predictions.length - 1; i++) {
+		const pt0 = predictions[i],
+			pt1 = predictions[i + 1];
+		if (pt0.value * pt1.value < 0) {
+			const mu = (0 - pt0.value) / (pt1.value - pt0.value);
+			const slackMs = pt0.timeMs + mu * (pt1.timeMs - pt0.timeMs);
+			if (slackMs >= startMs && slackMs <= endMs) {
+				events.push({ timeMs: slackMs, type: "slack", value: 0 });
+			}
+		}
+	}
+
+	// Detect Local Peaks (Max Flood/Ebb)
+	for (let i = 1; i < predictions.length - 1; i++) {
+		const ptPrev = predictions[i - 1],
+			ptCurr = predictions[i],
+			ptNext = predictions[i + 1];
+
+		if (ptCurr.timeMs >= startMs && ptCurr.timeMs <= endMs) {
+			if (
+				ptCurr.value > ptPrev.value &&
+				ptCurr.value > ptNext.value &&
+				ptCurr.value > 0.3
+			) {
+				events.push({
+					timeMs: ptCurr.timeMs,
+					type: "flood",
+					value: ptCurr.value,
+				});
+			} else if (
+				ptCurr.value < ptPrev.value &&
+				ptCurr.value < ptNext.value &&
+				ptCurr.value < -0.3
+			) {
+				events.push({
+					timeMs: ptCurr.timeMs,
+					type: "ebb",
+					value: ptCurr.value,
+				});
+			}
+		}
+	}
+
+	return events.sort((a, b) => a.timeMs - b.timeMs);
+}
+
+function renderCurrentsEventLabels(events, startMs, duration, getVelocityY) {
+	events.forEach((event) => {
+		const xPct = ((event.timeMs - startMs) / duration) * 100;
+		if (xPct < 2.5 || xPct > 97.5) return;
+
+		const div = document.createElement("div");
+		div.className = `currents-event ${event.type}`;
+		div.style.position = "absolute";
+		div.style.left = `${xPct}%`;
+		div.style.transform = "translateX(-50%)";
+
+		const timeStr = new Date(event.timeMs)
+			.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+			.replace(" ", "");
+		const yCoord = getVelocityY(event.value);
+
+		if (event.type === "flood") {
+			div.style.top = `${yCoord - 25}px`;
+			div.innerHTML = `<span class="currents-event-val" style="color: #06b6d4; font-weight:600; display:block; font-size:0.75rem; text-align: center;">↑ ${event.value.toFixed(1)} KT</span><span class="currents-event-time" style="display:block; font-size:0.65rem; opacity:0.6; text-align: center;">${timeStr}</span>`;
+		} else if (event.type === "ebb") {
+			div.style.top = `${yCoord + 2}px`;
+			div.innerHTML = `<span class="currents-event-val" style="color: #ec4899; font-weight:600; display:block; font-size:0.75rem; text-align: center;">↓ ${Math.abs(event.value).toFixed(1)} KT</span><span class="currents-event-time" style="display:block; font-size:0.65rem; opacity:0.6; text-align: center;">${timeStr}</span>`;
+		} else {
+			div.style.top = "28px";
+			div.innerHTML = `<span class="currents-event-arrow" style="display:block; font-size:0.75rem; color:#64748b; font-weight:bold; text-align: center;">◇</span><span class="currents-event-time" style="display:block; font-size:0.6rem; color:#64748b; text-align: center; margin-top: 2px;">${timeStr}</span>`;
+		}
+
+		elements.currentsEventsWrapper.appendChild(div);
+	});
+}
+
+// --- Astronomical & Sun/Moon Rendering ---
+
+function updateAstronomicalDetails() {
+	const dayAstro = getAstronomicalDataForSelectedDay();
+	if (!dayAstro) return;
+
+	if (elements.sunRiseTime)
+		elements.sunRiseTime.textContent = formatIsoTime(dayAstro.sunrise);
+	if (elements.sunSetTime)
+		elements.sunSetTime.textContent = formatIsoTime(dayAstro.sunset);
+
+	if (dayAstro.sunrise && dayAstro.sunset && elements.daylightDuration) {
+		const diffMs = new Date(dayAstro.sunset) - new Date(dayAstro.sunrise);
+		elements.daylightDuration.textContent = `${Math.floor(diffMs / (3600 * 1000))}h ${Math.round((diffMs % (3600 * 1000)) / (60 * 1000))}m`;
+	} else if (elements.daylightDuration) {
+		elements.daylightDuration.textContent = "--";
+	}
+
+	if (elements.moonRiseTime)
+		elements.moonRiseTime.textContent = formatIsoTime(dayAstro.moonrise);
+	if (elements.moonSetTime)
+		elements.moonSetTime.textContent = formatIsoTime(dayAstro.moonset);
+	if (elements.moonPhaseName)
+		elements.moonPhaseName.textContent = dayAstro.moon_phase_name.toUpperCase();
+	if (elements.moonIndicatorIcon)
+		elements.moonIndicatorIcon.textContent = dayAstro.moon_phase_symbol;
+}
+
+function getAstronomicalDataForSelectedDay() {
+	const base = new Date();
+	base.setDate(base.getDate() + state.selectedDayOffset);
+	const dateKey = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}-${String(base.getDate()).padStart(2, "0")}`;
+	return state.astronomical_data ? state.astronomical_data[dateKey] : null;
+}
+
+function renderSunBackground(startMs, duration, dayAstro) {
+	if (!dayAstro?.sunrise || !dayAstro.sunset) return hideSunElements();
+
+	const xRise =
+		((new Date(dayAstro.sunrise).getTime() - startMs) / duration) * 1000;
+	const xSet =
+		((new Date(dayAstro.sunset).getTime() - startMs) / duration) * 1000;
+	const r = (xSet - xRise) / 2;
+
+	const sunArcOnlyD = `M ${xRise.toFixed(1)} 340 A ${r.toFixed(1)} ${r.toFixed(1)} 0 0 1 ${xSet.toFixed(1)} 340`;
+	updateSunDOM(`${sunArcOnlyD} Z`, sunArcOnlyD, xRise, xSet, dayAstro);
+}
+
+function updateSunDOM(sunFillD, sunArcOnlyD, xRise, xSet, dayAstro) {
+	elements.sunPath.setAttribute("d", sunFillD);
+	elements.sunPath.style.display = "block";
+
+	if (elements.sunStrokePath) {
+		elements.sunStrokePath.setAttribute("d", sunArcOnlyD);
+		elements.sunStrokePath.style.display = "block";
+	}
+
+	setSvgElementX(elements.sunriseLine, xRise, true);
+	setSvgElementX(elements.sunsetLine, xSet, true);
+	setLabelPositionAndText(
+		elements.sunriseTimeLabel,
+		xRise,
+		formatIsoTime(dayAstro.sunrise),
+	);
+	setLabelPositionAndText(
+		elements.sunsetTimeLabel,
+		xSet,
+		formatIsoTime(dayAstro.sunset),
+	);
+	setLabelPositionAndText(elements.sunriseTextLabel, xRise);
+	setLabelPositionAndText(elements.sunsetTextLabel, xSet);
+}
+
+function hideSunElements() {
+	[
+		"sunPath",
+		"sunStrokePath",
+		"sunriseLine",
+		"sunsetLine",
+		"sunriseTextLabel",
+		"sunriseTimeLabel",
+		"sunsetTextLabel",
+		"sunsetTimeLabel",
+	].forEach((el) => {
+		if (elements[el]) elements[el].style.display = "none";
+	});
+}
+
+function renderLunarTransit(startMs, duration, dayAstro) {
+	if (!dayAstro) return hideLunarElements();
+
+	const moonriseMs = dayAstro.moonrise
+		? new Date(dayAstro.moonrise).getTime()
+		: null;
+	const moonsetMs = dayAstro.moonset
+		? new Date(dayAstro.moonset).getTime()
+		: null;
+	const lunarData = calculateLunarPathAndPosition(
+		moonriseMs,
+		moonsetMs,
+		startMs,
+		duration,
+		Date.now(),
+	);
+
+	elements.lunarTransitPath.setAttribute("d", lunarData.pathD);
+	elements.lunarTransitPath.style.display = "block";
+
+	updateMoonIndicator(lunarData, dayAstro);
+	updateLunarMarkersDOM(moonriseMs, moonsetMs, startMs, duration, dayAstro);
+}
+
+function updateLunarMarkersDOM(
+	moonriseMs,
+	moonsetMs,
+	startMs,
+	duration,
+	dayAstro,
+) {
+	const updateMarker = (ms, lineEl, textEl, timeEl, timeStr) => {
+		if (ms && ms >= startMs && ms <= startMs + duration) {
+			const x = ((ms - startMs) / duration) * 1000;
+			setSvgElementX(lineEl, x, true);
+			setLabelPositionAndText(timeEl, x, formatIsoTime(timeStr));
+			setLabelPositionAndText(textEl, x);
+		} else {
+			[lineEl, textEl, timeEl].forEach((el) => {
+				if (el) el.style.display = "none";
+			});
+		}
+	};
+
+	updateMarker(
+		moonriseMs,
+		elements.moonriseLine,
+		elements.moonriseTextLabel,
+		elements.moonriseTimeLabel,
+		dayAstro.moonrise,
+	);
+	updateMarker(
+		moonsetMs,
+		elements.moonsetLine,
+		elements.moonsetTextLabel,
+		elements.moonsetTimeLabel,
+		dayAstro.moonset,
+	);
+}
+
+function hideLunarElements() {
+	elements.lunarTransitPath.style.display = "none";
+	elements.moonIndicatorGroup.style.display = "none";
+	[
+		"moonriseLine",
+		"moonriseTextLabel",
+		"moonriseTimeLabel",
+		"moonsetLine",
+		"moonsetTextLabel",
+		"moonsetTimeLabel",
+	].forEach((el) => {
+		if (elements[el]) elements[el].style.display = "none";
+	});
+}
+
+function calculateLunarPathAndPosition(
+	moonriseMs,
+	moonsetMs,
+	startMs,
+	duration,
+	nowMs,
+) {
+	let pathD = "",
+		showMoon = false,
+		mx = 0,
+		my = 0;
+	const halfLunarDayMs = 12.4 * 3600 * 1000;
+	const baselineY = 340;
+
+	const calcArc = (xStart, xEnd) =>
+		`M ${xStart.toFixed(1)} ${baselineY} A ${((xEnd - xStart) / 2).toFixed(1)} ${((xEnd - xStart) / 2).toFixed(1)} 0 0 1 ${xEnd.toFixed(1)} ${baselineY}`;
+
+	const checkMoonStatus = (startPos, endPos, startPosMs, endPosMs) => {
+		if (nowMs >= startPosMs && nowMs <= endPosMs) {
+			showMoon = true;
+			const r = (endPos - startPos) / 2;
+			const angle =
+				Math.PI - ((nowMs - startPosMs) / (endPosMs - startPosMs)) * Math.PI;
+			mx = startPos + r + r * Math.cos(angle);
+			my = baselineY - r * Math.sin(angle);
+		}
+	};
+
+	if (moonriseMs && moonsetMs) {
+		if (moonriseMs < moonsetMs) {
+			const xMR = ((moonriseMs - startMs) / duration) * 1000;
+			const xMS = ((moonsetMs - startMs) / duration) * 1000;
+			pathD = calcArc(xMR, xMS);
+			checkMoonStatus(xMR, xMS, moonriseMs, moonsetMs);
+		} else {
+			const yest_mr = moonsetMs - halfLunarDayMs;
+			const xMR_yest = ((yest_mr - startMs) / duration) * 1000;
+			const xMS = ((moonsetMs - startMs) / duration) * 1000;
+			const xMR = ((moonriseMs - startMs) / duration) * 1000;
+			const tom_ms = moonriseMs + halfLunarDayMs;
+			const xMS_tom = ((tom_ms - startMs) / duration) * 1000;
+
+			pathD = `${calcArc(xMR_yest, xMS)} ${calcArc(xMR, xMS_tom)}`;
+			checkMoonStatus(xMR_yest, xMS, yest_mr, moonsetMs);
+			checkMoonStatus(xMR, xMS_tom, moonriseMs, tom_ms);
+		}
+	} else if (moonsetMs) {
+		const yest_mr = moonsetMs - halfLunarDayMs;
+		const xMR_yest = ((yest_mr - startMs) / duration) * 1000;
+		const xMS = ((moonsetMs - startMs) / duration) * 1000;
+		pathD = calcArc(xMR_yest, xMS);
+		checkMoonStatus(xMR_yest, xMS, yest_mr, moonsetMs);
+	} else if (moonriseMs) {
+		const xMR = ((moonriseMs - startMs) / duration) * 1000;
+		const tom_ms = moonriseMs + halfLunarDayMs;
+		const xMS_tom = ((tom_ms - startMs) / duration) * 1000;
+		pathD = calcArc(xMR, xMS_tom);
+		checkMoonStatus(xMR, xMS_tom, moonriseMs, tom_ms);
+	} else {
+		const yest_mr = startMs - duration / 4;
+		const tom_ms = startMs + duration + duration / 4;
+		const xMR_yest = ((yest_mr - startMs) / duration) * 1000;
+		const xMS_tom = ((tom_ms - startMs) / duration) * 1000;
+		pathD = calcArc(xMR_yest, xMS_tom);
+		checkMoonStatus(xMR_yest, xMS_tom, yest_mr, tom_ms);
+	}
+
+	return { pathD, showMoon, mx, my };
+}
+
+function updateMoonIndicator(lunarData, dayAstro) {
+	if (state.selectedDayOffset === 0 && lunarData.showMoon) {
+		elements.moonIndicatorGroup.style.display = "block";
+		elements.moonIndicatorGroup.setAttribute(
+			"transform",
+			`translate(${lunarData.mx.toFixed(1)}, ${lunarData.my.toFixed(1)})`,
+		);
+		elements.moonIndicatorIcon.textContent = dayAstro.moon_phase_symbol;
+	} else {
+		elements.moonIndicatorGroup.style.display = "none";
+	}
+}
+
+// --- Tide Wave ---
+
+function renderTideWave(startMs, duration) {
+	let wavePathD = "";
+	const steps = 144;
+
+	for (let i = 0; i <= steps; i++) {
+		const tMs = startMs + (i / steps) * duration;
+		const x = (i / steps) * 1000;
+		const y = getSvgYCoordinate(getTideHeightAtTime(tMs));
+		wavePathD +=
+			i === 0
+				? `M ${x.toFixed(1)} ${y.toFixed(1)}`
+				: ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+	}
+
+	elements.waveStrokePath.setAttribute("d", wavePathD);
+	elements.waveFillPath.setAttribute("d", `${wavePathD} L 1000 340 L 0 340 Z`);
+}
+
+// --- Math & Interpolation Helpers ---
+
+function cosineInterpolate(y1, y2, mu) {
+	const mu2 = (1 - Math.cos(mu * Math.PI)) / 2;
+	return y1 * (1 - mu2) + y2 * mu2;
+}
+
+function interpolateValueAtTime(targetTimeMs, dataArray) {
+	if (dataArray.length === 0) return 0.0;
+
+	let lower = null,
+		upper = null;
+	for (let i = 0; i < dataArray.length; i++) {
+		const pt = dataArray[i];
+		if (pt.timeMs <= targetTimeMs && (!lower || pt.timeMs > lower.timeMs))
+			lower = pt;
+		if (pt.timeMs >= targetTimeMs && (!upper || pt.timeMs < upper.timeMs))
+			upper = pt;
+	}
+
+	if (!lower && !upper) return 0.0;
+	if (!lower) return upper.value;
+	if (!upper) return lower.value;
+	if (lower.timeMs === upper.timeMs) return lower.value;
+
+	const mu = (targetTimeMs - lower.timeMs) / (upper.timeMs - lower.timeMs);
+	return cosineInterpolate(lower.value, upper.value, mu);
+}
+
+function getTideHeightAtTime(targetTimeMs) {
+	return interpolateValueAtTime(targetTimeMs, state.tideHeights);
+}
+
+function getCurrentSpeedAtTime(targetTimeMs) {
+	return interpolateValueAtTime(targetTimeMs, state.currentPredictions);
+}
+
+function getSvgYCoordinate(height) {
+	return 340 - ((height - -2.0) / (12.0 - -2.0)) * 260;
+}
+
+function getTargetDayRange() {
+	const base = new Date();
+	base.setDate(base.getDate() + state.selectedDayOffset);
+	return [
+		new Date(
+			base.getFullYear(),
+			base.getMonth(),
+			base.getDate(),
+			0,
+			0,
+			0,
+			0,
+		).getTime(),
+		new Date(
+			base.getFullYear(),
+			base.getMonth(),
+			base.getDate(),
+			23,
+			59,
+			59,
+			999,
+		).getTime(),
+	];
+}
+
+// --- DOM / SVG Helpers ---
+
+function createSvgElement(tag, attributes, textContent = null) {
+	const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+	for (const [key, value] of Object.entries(attributes)) {
+		el.setAttribute(key, value);
+	}
+	if (textContent) el.textContent = textContent;
+	return el;
+}
+
+function formatIsoTime(isoString) {
+	if (!isoString) return "--:--";
+	return new Date(isoString).toLocaleTimeString([], {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+}
+
+function setSvgElementX(element, xValue, isLine = false) {
+	if (!element) return;
+	const fixedX = xValue.toFixed(1);
+	if (isLine) {
+		element.setAttribute("x1", fixedX);
+		element.setAttribute("x2", fixedX);
+	} else {
+		element.setAttribute("x", fixedX);
+	}
+	element.style.display = "block";
+}
+
+function setLabelPositionAndText(element, xValue, text = null) {
+	if (!element) return;
+	element.setAttribute("x", xValue.toFixed(1));
+	if (text !== null) element.textContent = text;
+	element.style.display = "block";
+}

@@ -1,200 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tide Clock TV Dashboard - Portland, ME</title>
-  <!-- Google Fonts for premium clean typography -->
+  <title>Experimental Tidelog | 24-Hour Dashboard</title>
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <!-- Fullscreen display wrapper -->
   <div id="app-wrapper">
-    <div id="clock-container" class="theme-ocean">
-      
-      <!-- Top Section: Time and Current Tide readouts -->
-      <header id="dashboard-header">
-        <!-- Top Left: Large Clock -->
+    <div id="tidelog-container">
+
+      <!-- Top Header Row -->
+      <header id="tidelog-header">
         <div class="header-left">
-          <div id="digital-time">12:34<span>PM</span></div>
-          <div id="digital-date">Friday, October 27, 2023</div>
-          <div id="moon-phase">
-            <span id="moon-symbol">--</span>
-            <span id="moon-name">--</span>
-          </div>
+          <div id="station-name">PORTLAND HARBOR</div>
+          <div id="digital-date">--</div>
         </div>
-        
-        <!-- Top Center: NWS Coastal Marine Forecast Ticker -->
-        <div id="forecast-header-container">
-          <div class="forecast-ticker-title">Casco Bay Forecast</div>
-          <div id="forecast-header-scroll">
-            <div id="forecast-scroll-wrapper">
-              <!-- Dynamically populated vertical sliding periods -->
-            </div>
+
+        <div class="header-center">
+          <div id="day-navigation">
+            <button id="btn-today" class="nav-btn active">Today</button>
+            <button id="btn-tomorrow" class="nav-btn">Tomorrow</button>
           </div>
+          <div id="digital-time">--:--<span>--</span></div>
         </div>
-        
-        <!-- Top Right: Giant Tide Reading -->
+
         <div class="header-right">
-          <div id="current-tide-readout">
-            <span id="current-tide-val">+8.2</span>
+          <div id="active-readout">
+            <span id="current-tide-val">--</span>
             <span id="current-tide-unit">FT</span>
+            <span id="current-tide-slope">↑</span>
           </div>
-          <div id="tide-status-container">
-            <span id="tide-status-text">RISING TIDE</span>
-            <div id="status-pulse-dot" class="pulse-dot"></div>
-          </div>
-          <div id="water-temp-container">
-            <span id="water-temp-label">WATER TEMP</span>
-            <span id="water-temp-val">--</span>
-          </div>
-          <div id="current-status-container">
-            <span id="current-status-label">HARBOR CURRENT</span>
-            <span id="current-status-val">--</span>
-          </div>
-          <div id="bar-status-container">
-            <span id="bar-status-label">GDI-LDI BAR</span>
-            <div class="bar-status-badge-wrapper">
-              <span id="bar-status-val" class="bar-closed">CLOSED</span>
-              <span id="bar-status-sub">Opens at --:--</span>
-            </div>
-          </div>
+          <div id="current-status-val">--</div>
         </div>
       </header>
 
-      <!-- Middle Section: Dynamic SVG Wave Plot Area -->
-      <main id="wave-plot-container">
-        <!-- Tide Curve Plot (Full Width) -->
-        <div id="wave-plot-left">
-          <!-- SVG Canvas for drawing paths -->
-          <svg id="tide-svg" viewBox="0 0 1000 400" preserveAspectRatio="none">
-            <!-- Definitions for gradients and filters -->
-            <defs>
-              <!-- Wave Area Fill Gradient -->
-              <linearGradient id="wave-fill-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.3" />
-                <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0" />
-              </linearGradient>
-              
-              <!-- Glow Filter for the wave stroke -->
-              <filter id="cyan-glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
+      <!-- Main Layout Section: Chart in Center, Widgets on Left/Right -->
+      <main id="tidelog-content">
 
-            <!-- Filled Wave Area -->
-            <path id="wave-fill-path" d="" fill="url(#wave-fill-grad)" />
-            
-            <!-- Neon Glowing Wave Stroke Line -->
-            <path id="wave-stroke-path" d="" fill="none" stroke="#06b6d4" stroke-width="4" filter="url(#cyan-glow)" />
-            
-            <!-- Walkable overlay paths (Tide < 4.0 ft with warnings) -->
-            <path id="wave-walkable-path" d="" fill="none" stroke="#10b981" stroke-width="4.5" />
-            <path id="wave-warning-path" d="" fill="none" stroke="#f59e0b" stroke-width="4.5" />
-            <path id="wave-danger-path" d="" fill="none" stroke="#ef4444" stroke-width="4.5" />
-            
-            <!-- Vertical Dashed Hour Marker (NOW) -->
-            <line id="now-marker-line" x1="0" y1="0" x2="0" y2="400" stroke="#475569" stroke-dasharray="6,6" stroke-width="1.5" />
-            
-            <!-- Active Time Dot Intersection (Dual-circle glow to avoid filter rendering bugs) -->
-            <circle id="now-marker-glow" cx="0" cy="0" r="0" fill="#06b6d4" opacity="0" />
-          </svg>
 
-          <!-- HTML Overlay for High/Low tide callouts (dynamically positioned by app.js) -->
-          <div id="tide-overlay-labels">
-            <!-- Dynamic High/Low Tide text tags will be appended here -->
+        <!-- Central Tidelog Graph Visualizer -->
+        <section class="center-graph-panel">
+          <div class="graph-instrument">
+
+            <!-- SVG Plotting Canvas -->
+            <svg id="tidelog-svg" viewBox="0 0 1000 400" preserveAspectRatio="none">
+              <defs>
+                <!-- Sun Daylight Shading Gradient (behind curve) -->
+                <linearGradient id="sun-fill-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.38" />
+                  <stop offset="50%" stop-color="#f59e0b" stop-opacity="0.18" />
+                  <stop offset="100%" stop-color="#d97706" stop-opacity="0.0" />
+                </linearGradient>
+
+                <!-- Tide Curve Gradient (Highly Opaque Ocean) -->
+                <linearGradient id="wave-fill-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#0e7490" stop-opacity="0.88" />
+                  <stop offset="100%" stop-color="#02141a" stop-opacity="0.95" />
+                </linearGradient>
+
+                <!-- Glow Filters -->
+                <filter id="cyan-glow" x="-10%" y="-10%" width="120%" height="120%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <!-- Sun Background Daylight Area (Circular Sun Semicircle) -->
+              <path id="sun-path" d="" fill="url(#sun-fill-grad)" />
+              <path id="sun-stroke-path" d="" fill="none" stroke="#fbbf24" stroke-dasharray="3,6" stroke-width="2"
+                opacity="0.6" />
+
+              <!-- Sunrise/Sunset Vertical Lines & Labels -->
+              <line id="sunrise-line" x1="0" y1="0" x2="0" y2="340" stroke="#fbbf24" stroke-dasharray="3,6"
+                stroke-width="1.5" opacity="0.5" />
+              <line id="sunset-line" x1="0" y1="0" x2="0" y2="340" stroke="#fbbf24" stroke-dasharray="3,6"
+                stroke-width="1.5" opacity="0.5" />
+
+
+              <!-- Sunrise Stacked Label -->
+              <text id="sunrise-text-label" x="0" y="-20" fill="#fbbf24" font-family="'Outfit', sans-serif"
+                font-size="9" font-weight="400" text-anchor="middle" opacity="0.7">Sunrise</text>
+              <text id="sunrise-time-label" x="0" y="-8" fill="#fbbf24" font-family="'Outfit', sans-serif"
+                font-size="10" font-weight="600" text-anchor="middle" opacity="0.85"></text>
+
+              <!-- Sunset Stacked Label -->
+              <text id="sunset-text-label" x="0" y="-20" fill="#fbbf24" font-family="'Outfit', sans-serif" font-size="9"
+                font-weight="400" text-anchor="middle" opacity="0.7">Sunset</text>
+              <text id="sunset-time-label" x="0" y="-8" fill="#fbbf24" font-family="'Outfit', sans-serif" font-size="10"
+                font-weight="600" text-anchor="middle" opacity="0.85"></text>
+
+
+              <!-- Moonrise/Moonset Vertical Lines & Labels -->
+              <line id="moonrise-line" x1="0" y1="0" x2="0" y2="340" stroke="#64748b" stroke-dasharray="3,6"
+                stroke-width="1.5" opacity="0.5" />
+              <line id="moonset-line" x1="0" y1="0" x2="0" y2="340" stroke="#64748b" stroke-dasharray="3,6"
+                stroke-width="1.5" opacity="0.5" />
+
+              <!-- Moonrise Stacked Label -->
+              <text id="moonrise-text-label" x="0" y="-20" fill="#64748b" font-family="'Outfit', sans-serif"
+                font-size="9" font-weight="400" text-anchor="middle" opacity="0.7">Moonrise</text>
+              <text id="moonrise-time-label" x="0" y="-8" fill="#64748b" font-family="'Outfit', sans-serif"
+                font-size="10" font-weight="600" text-anchor="middle" opacity="0.85"></text>
+
+              <!-- Moonset Stacked Label -->
+              <text id="moonset-text-label" x="0" y="-20" fill="#64748b" font-family="'Outfit', sans-serif"
+                font-size="9" font-weight="400" text-anchor="middle" opacity="0.7">Moonset</text>
+              <text id="moonset-time-label" x="0" y="-8" fill="#64748b" font-family="'Outfit', sans-serif"
+                font-size="10" font-weight="600" text-anchor="middle" opacity="0.85"></text>
+
+              <!-- Dotted Lunar Transit Arc -->
+              <path id="lunar-transit-path" d="" fill="none" stroke="#64748b" stroke-dasharray="3,6"
+                stroke-width="1.5" />
+
+              <!-- Moon Icon sliding group -->
+              <g id="moon-indicator-group" transform="translate(0,0)">
+                <circle cx="0" cy="0" r="14" fill="#0f172a" stroke="#64748b" stroke-width="1" />
+                <text id="moon-indicator-icon" x="0" y="0" font-size="18" text-anchor="middle"
+                  dominant-baseline="central">🌑</text>
+              </g>
+
+              <!-- Vertical Grid Hours Lines -->
+              <g id="tidelog-grid-lines"></g>
+
+              <!-- Tide Wave Fills & Curves -->
+              <path id="wave-fill-path" d="" fill="url(#wave-fill-grad)" />
+              <path id="wave-stroke-path" d="" fill="none" stroke="#06b6d4" stroke-width="3" filter="url(#cyan-glow)" />
+
+              <!-- Real-time Vertical NOW line -->
+              <line id="now-marker-line" x1="0" y1="0" x2="0" y2="400" stroke="#e11d48" stroke-dasharray="5,5"
+                stroke-width="1.5" />
+            </svg>
+
+            <!-- HTML Overlay for High/Low tide callouts -->
+            <div id="tide-overlay-labels">
+              <!-- Real-time HTML indicator dot to prevent SVG scale distortion -->
+              <div id="now-marker-dot"></div>
+            </div>
+
+            <!-- Horizontal currents timeline container row -->
+            <div id="currents-timeline-container">
+              <div class="currents-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span class="currents-title">Predicted Currents</span>
+                <span class="currents-legend"
+                  style="font-size: 0.75rem; font-family: 'Inter', sans-serif; font-weight: 500;">
+                  <span style="color: #06b6d4; margin-left: 15px;">↑ Flood</span>
+                  <span style="color: #ec4899; margin-left: 15px;">↓ Ebb</span>
+                  <span style="color: #64748b; margin-left: 15px;">◇ Slack</span>
+                </span>
+              </div>
+
+              <div id="currents-timeline-bar" style="position: relative; height: 80px; margin-top: 10px;">
+                <!-- Symmetrical SVG Current Velocity Canvas -->
+                <svg id="currents-svg" viewBox="0 0 1000 80" preserveAspectRatio="none"
+                  style="width: 100%; height: 100%; display: block; overflow: visible;">
+                  <defs>
+                    <!-- Flood Curve Gradient (Teal) -->
+                    <linearGradient id="flood-fill-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.4" />
+                      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0" />
+                    </linearGradient>
+                    <!-- Ebb Curve Gradient (Pink) -->
+                    <linearGradient id="ebb-fill-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stop-color="#ec4899" stop-opacity="0.0" />
+                      <stop offset="100%" stop-color="#ec4899" stop-opacity="0.4" />
+                    </linearGradient>
+                  </defs>
+
+                  <!-- Center Zero/Slack Axis Line -->
+                  <line x1="0" y1="40" x2="1000" y2="40" stroke="#334155" stroke-width="1.5" stroke-dasharray="4,4" />
+
+                  <!-- Dynamic Curves -->
+                  <path id="currents-flood-path" d="" fill="url(#flood-fill-grad)" />
+                  <path id="currents-ebb-path" d="" fill="url(#ebb-fill-grad)" />
+                  <path id="currents-stroke-path" d="" fill="none" stroke="#64748b" stroke-width="1.5" opacity="0.6" />
+                </svg>
+
+                <!-- Wrapper to overlay text labels dynamically over the curve peaks -->
+                <div id="currents-events-wrapper"
+                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+            </div>
+
+            <!-- Horizontal weather timeline container row -->
+            <div id="weather-timeline-container" style="margin-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px;">
+              <div class="weather-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="weather-title" style="font-size: 0.8rem; font-weight: 600; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase;">Marine Wind & Seas</span>
+                <span class="weather-station-label" style="font-size: 0.72rem; font-family: 'Inter', sans-serif; color: var(--text-muted); opacity: 0.7;">NOAA ZONE ANZ153</span>
+              </div>
+              <div id="weather-timeline-bar" style="position: relative; height: 60px; display: flex; gap: 8px;">
+                <!-- Dynamically populated Night, Day, Night timeline blocks -->
+              </div>
+            </div>
+
           </div>
+        </section>
 
-          <!-- Real-time Active Time Indicator Dot (drawn in HTML to prevent SVG aspect ratio stretching) -->
-          <div id="now-marker-dot"></div>
-        </div>
+
       </main>
 
-      <!-- Bottom Section: Timeline Labels -->
-      <footer id="dashboard-footer">
-        <div id="timeline-labels">
-          <!-- Dynamically populated or static hour labels -->
-          <div class="time-tick">00</div>
-          <div class="time-tick">02</div>
-          <div class="time-tick">04</div>
-          <div class="time-tick">06</div>
-          <div class="time-tick">08</div>
-          <div class="time-tick">10</div>
-          <div class="time-tick">12</div>
-          <div class="time-tick">14</div>
-          <div class="time-tick">16</div>
-          <div class="time-tick">18</div>
-          <div class="time-tick">20</div>
-          <div class="time-tick">22</div>
-          <div class="time-tick">00</div>
-        </div>
-        <div id="footer-bottom-row">
-          <div id="legend-container">
-            <span class="legend-box"></span>
-            <span class="legend-label">Walkable Bar (&lt; 4.0 FT)</span>
-          </div>
-          <div id="meta-info">
-            <span id="station-name">PORTLAND, MAINE</span>
-            <span class="meta-sep">•</span>
-            <span id="last-updated-text">UPDATED: --</span>
-          </div>
-        </div>
+      <!-- Footer Info -->
+      <footer id="tidelog-footer">
+        <span class="station-meta">NOAA TIDE STATION: <span id="meta-station-id">--</span> | CURRENT STATION:
+          CAB1401</span>
+        <span class="update-meta" id="last-updated-text">UPDATED: --</span>
       </footer>
-      
-      <!-- Invisible Settings Trigger (Click anywhere in the very corners or press 'S' key, but we'll place a subtle button) -->
-      <button id="settings-toggle" aria-label="Settings" title="Configure Tide Clock">
-        <svg viewBox="0 0 24 24" width="20" height="20">
-          <path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
-        </svg>
-      </button>
 
-      <!-- Settings Panel Modal -->
-      <div id="settings-panel" class="hidden">
-        <div class="settings-content">
-          <h2>Tide Clock Settings</h2>
-          
-          <div class="settings-group">
-            <label for="setting-theme">Color Theme</label>
-            <select id="setting-theme">
-              <option value="ocean">Ocean Cyan & Blue</option>
-              <option value="cyber">Cyberpunk Pink & Yellow</option>
-              <option value="mono">Monochromatic White & Rose</option>
-              <option value="amber">Retro Amber</option>
-            </select>
-          </div>
-
-          <div class="settings-group">
-            <label for="setting-scale">Vertical Scaling</label>
-            <select id="setting-scale">
-              <option value="dynamic">Dynamic (Scale to Day's Range)</option>
-              <option value="fixed">Fixed (-2.0 ft to +12.0 ft)</option>
-            </select>
-          </div>
-
-          <div class="settings-group">
-            <label for="setting-source">Data Mode</label>
-            <select id="setting-source">
-              <option value="live">Live NOAA Data (Portland, ME)</option>
-              <option value="sim">Simulated Offline Demo</option>
-            </select>
-          </div>
-
-          <div class="settings-actions">
-            <button id="settings-save">Apply Settings</button>
-            <button id="settings-close">Cancel</button>
-          </div>
-        </div>
-      </div>
-      
     </div>
   </div>
   <script src="app.js"></script>
 </body>
+
 </html>
