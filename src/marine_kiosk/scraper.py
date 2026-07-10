@@ -5,12 +5,15 @@ import requests
 import re
 from noaa_coops import Station
 
-def fetch_tide_data(station_id, units, datum):
+def fetch_tide_data(station_id, units, datum, config_path=None):
     # Find the web output directory relative to this package script location
     # script: src/tide_clock/scraper.py -> web_dir: src/../web
     package_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(os.path.dirname(package_dir))
     web_dir = os.path.join(root_dir, "web")
+    
+    if config_path is None:
+        config_path = os.path.join(root_dir, "tide_config.json")
     
     # Ensure web directory exists (just in case)
     os.makedirs(web_dir, exist_ok=True)
@@ -21,7 +24,6 @@ def fetch_tide_data(station_id, units, datum):
     astral_lng = None
     astral_elev = 0.0
     try:
-        config_path = os.path.join(root_dir, "tide_config.json")
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 cfg = json.load(f)
@@ -136,7 +138,6 @@ def fetch_tide_data(station_id, units, datum):
     nws_office = "GYX"
     nws_zone = "ANZ153"
     try:
-        config_path = os.path.join(root_dir, "tide_config.json")
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 cfg = json.load(f)

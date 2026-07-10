@@ -3,15 +3,17 @@ import json
 import sys
 import threading
 import time
+import argparse
 from .scraper import fetch_tide_data
 from .server import start_server
 
-def load_config():
-    # Find the root directory relative to this script location
-    # script: src/tide_clock/main.py -> root_dir: src/..
-    package_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(os.path.dirname(package_dir))
-    config_path = os.path.join(root_dir, "tide_config.json")
+def load_config(config_path=None):
+    if config_path is None:
+        # Find the root directory relative to this script location
+        # script: src/tide_clock/main.py -> root_dir: src/..
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.dirname(os.path.dirname(package_dir))
+        config_path = os.path.join(root_dir, "tide_config.json")
     
     default_config = {
         "station_id": "8418150",
@@ -28,7 +30,7 @@ def load_config():
                 # Merge with defaults to ensure all keys exist
                 return {**default_config, **config}
         except Exception as e:
-            print(f"Error loading config.json, using defaults: {e}")
+            print(f"Error loading {config_path}, using defaults: {e}")
             return default_config
     else:
         # Write default config if it doesn't exist
@@ -37,14 +39,14 @@ def load_config():
                 json.dump(default_config, f, indent=2)
             print(f"Created default configuration at {config_path}")
         except Exception as e:
-            print(f"Failed to create default config file: {e}")
+            print(f"Failed to create default config file at {config_path}: {e}")
         return default_config
 
-def scraper_worker(station_id, units, datum, interval_hours):
+def scraper_worker(station_id, units, datum, interval_hours, config_path=None):
     print(f"Scraper Worker: Starting scraper thread (updates every {interval_hours} hour(s)).")
     while True:
         try:
-            fetch_tide_data(station_id, units, datum)
+            fetch_tide_data(station_id, units, datum, config_path=config_path)
         except Exception as e:
             print(f"Scraper Worker Error: Scraper failed to fetch data: {e}")
         
@@ -52,7 +54,11 @@ def scraper_worker(station_id, units, datum, interval_hours):
         time.sleep(interval_hours * 3600)
 
 def main():
-    config = load_config()
+    parser = argparse.ArgumentParser(description="Marine Kiosk Daemon Service")
+    parser.add_argument("--config", type=str, default=None, help="Path to the configuration JSON file")
+    args = parser.parse_args()
+
+    config = load_config(args.config)
     
     station_id = config.get("station_id", "8418150")
     units = config.get("units", "english")
@@ -63,7 +69,7 @@ def main():
     # Start the scraper loop in a background daemon thread
     scraper_thread = threading.Thread(
         target=scraper_worker,
-        args=(station_id, units, datum, interval_hours),
+        args=(station_id, units, datum, interval_hours, args.config),
         daemon=True
     )
     scraper_thread.start()
@@ -73,3 +79,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
