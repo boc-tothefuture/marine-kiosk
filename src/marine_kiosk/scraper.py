@@ -39,13 +39,56 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     
     station = Station(id=station_id)
     station_name = getattr(station, "name", f"Station {station_id}")
+    output_station_id = station_id
+
+    # Check if this is a subordinate station using NOAA Metadata API
+    ref_station_id = station_id
+    is_subordinate = False
+    time_offset_high = 0
+    time_offset_low = 0
+    height_offset_high = 0.0
+    height_offset_low = 0.0
+    height_adj_type = "R"
+    
+    try:
+        offsets_url = f"https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/{station_id}/tidepredoffsets.json"
+        res_offsets = requests.get(offsets_url, timeout=10)
+        if res_offsets.status_code == 200:
+            offsets_data = res_offsets.json()
+            parent_ref = offsets_data.get("refStationId")
+            if parent_ref:
+                ref_station_id = parent_ref
+                is_subordinate = True
+                time_offset_high = offsets_data.get("timeOffsetHighTide") or 0
+                time_offset_low = offsets_data.get("timeOffsetLowTide") or 0
+                height_adj_type = offsets_data.get("heightAdjustedType") or "R"
+                
+                default_h_high = 1.0 if height_adj_type == "R" else 0.0
+                default_h_low = 1.0 if height_adj_type == "R" else 0.0
+                
+                height_offset_high = offsets_data.get("heightOffsetHighTide")
+                if height_offset_high is None:
+                    height_offset_high = default_h_high
+                height_offset_low = offsets_data.get("heightOffsetLowTide")
+                if height_offset_low is None:
+                    height_offset_low = default_h_low
+                    
+                print(f"Scraper: Detected subordinate station {station_id}. Using reference station {ref_station_id} with offsets: "
+                      f"time high={time_offset_high}m, low={time_offset_low}m, height type={height_adj_type}, high={height_offset_high}, low={height_offset_low}")
+    except Exception as e:
+        print(f"Scraper: Warning: failed to fetch tide offsets for station {station_id}: {e}")
+
+    if is_subordinate:
+        ref_station = Station(id=ref_station_id)
+    else:
+        ref_station = station
 
     # Fetch 3 days of predictions (yesterday, today, tomorrow) to support three tide cycles display
     now = datetime.datetime.now()
     begin_date = (now - datetime.timedelta(days=1)).strftime("%Y%m%d")
     end_date = (now + datetime.timedelta(days=2)).strftime("%Y%m%d")
     
-    df = station.get_data(
+    df = ref_station.get_data(
         begin_date=begin_date,
         end_date=end_date,
         product="predictions",
@@ -68,7 +111,7 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     # Fetch exact high/low tide predictions (hilo)
     tide_extremes = []
     try:
-        df_hilo = station.get_data(
+        df_hilo = ref_station.get_data(
             begin_date=begin_date,
             end_date=end_date,
             product="predictions",
@@ -85,6 +128,101 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
             })
     except Exception as e:
         print(f"Scraper: Warning: failed to fetch exact tide extremes: {e}")
+
+    # Apply subordinate adjustments if active
+    if is_subordinate:
+        # 1. Adjust tide extremes
+        adjusted_extremes = []
+        tide_extremes_parsed = []
+        for ext in tide_extremes:
+            ext_time = datetime.datetime.fromisoformat(ext["time"])
+            if ext["type"] == "H":
+                adjusted_time = ext_time + datetime.timedelta(minutes=time_offset_high)
+                if height_adj_type == "R":
+                    adjusted_val = ext["value"] * height_offset_high
+                else:
+                    adjusted_val = ext["value"] + height_offset_high
+            else:
+                adjusted_time = ext_time + datetime.timedelta(minutes=time_offset_low)
+                if height_adj_type == "R":
+                    adjusted_val = ext["value"] * height_offset_low
+                else:
+                    adjusted_val = ext["value"] + height_offset_low
+            
+            adjusted_extremes.append({
+                "time": adjusted_time.isoformat(),
+                "value": round(adjusted_val, 3),
+                "type": ext["type"]
+            })
+            tide_extremes_parsed.append({
+                "time": adjusted_time,
+                "value": adjusted_val,
+                "type": ext["type"]
+            })
+        tide_extremes = adjusted_extremes
+        tide_extremes_parsed.sort(key=lambda x: x["time"])
+
+        # 2. Adjust hourly predictions by interpolating offsets between adjusted extremes
+        adjusted_heights = []
+        for pt in tide_heights:
+            pt_time = datetime.datetime.fromisoformat(pt["time"])
+            val = pt["value"]
+            
+            if tide_extremes_parsed:
+                # Find closest previous and next extremes in the adjusted extremes list
+                prev_ext = None
+                next_ext = None
+                for ext in tide_extremes_parsed:
+                    if ext["time"] <= pt_time:
+                        prev_ext = ext
+                    if ext["time"] >= pt_time and next_ext is None:
+                        next_ext = ext
+                        break
+                
+                if prev_ext is None and next_ext is None:
+                    adjusted_val = val
+                    adjusted_time = pt_time
+                elif prev_ext is None:
+                    t_off = time_offset_high if next_ext["type"] == "H" else time_offset_low
+                    h_off = height_offset_high if next_ext["type"] == "H" else height_offset_low
+                    adjusted_time = pt_time + datetime.timedelta(minutes=t_off)
+                    adjusted_val = val * h_off if height_adj_type == "R" else val + h_off
+                elif next_ext is None:
+                    t_off = time_offset_high if prev_ext["type"] == "H" else time_offset_low
+                    h_off = height_offset_high if prev_ext["type"] == "H" else height_offset_low
+                    adjusted_time = pt_time + datetime.timedelta(minutes=t_off)
+                    adjusted_val = val * h_off if height_adj_type == "R" else val + h_off
+                else:
+                    t_prev = prev_ext["time"]
+                    t_next = next_ext["time"]
+                    total_sec = (t_next - t_prev).total_seconds()
+                    if total_sec > 0:
+                        factor = (pt_time - t_prev).total_seconds() / total_sec
+                    else:
+                        factor = 0.5
+                    
+                    t_off_p = time_offset_high if prev_ext["type"] == "H" else time_offset_low
+                    t_off_n = time_offset_high if next_ext["type"] == "H" else time_offset_low
+                    h_off_p = height_offset_high if prev_ext["type"] == "H" else height_offset_low
+                    h_off_n = height_offset_high if next_ext["type"] == "H" else height_offset_low
+                    
+                    int_t_off = (1 - factor) * t_off_p + factor * t_off_n
+                    int_h_off = (1 - factor) * h_off_p + factor * h_off_n
+                    
+                    adjusted_time = pt_time + datetime.timedelta(minutes=int_t_off)
+                    if height_adj_type == "R":
+                        adjusted_val = val * int_h_off
+                    else:
+                        adjusted_val = val + int_h_off
+            else:
+                adjusted_time = pt_time
+                adjusted_val = val
+                
+            adjusted_heights.append({
+                "time": adjusted_time.isoformat(),
+                "value": round(adjusted_val, 3)
+            })
+        tide_heights = adjusted_heights
 
     # Fetch predicted currents data
     current_predictions = []
@@ -269,7 +407,7 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
         print(f"Scraper: Failed to compute astronomical data: {e}")
 
     output_data = {
-        "station_id": station_id,
+        "station_id": output_station_id,
         "station_name": station_name,
         "currents_station_id": currents_station_id,
         "date": station_today.strftime("%Y-%m-%d"),
