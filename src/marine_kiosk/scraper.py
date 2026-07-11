@@ -19,19 +19,21 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     os.makedirs(web_dir, exist_ok=True)
     output_path = os.path.join(web_dir, "tide_data.json")
 
-    # Load configuration parameters for location coordinates
-    astral_lat = None
-    astral_lng = None
-    astral_elev = 0.0
+    # Load configuration parameters
+    cfg = {}
     try:
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 cfg = json.load(f)
-                astral_lat = cfg.get("astral_latitude")
-                astral_lng = cfg.get("astral_longitude")
-                astral_elev = cfg.get("astral_elevation", 0.0)
     except Exception as e:
-        print(f"Scraper: Warning: failed to load tide_config.json at startup: {e}")
+        print(f"Scraper: Warning: failed to load config at startup: {e}")
+
+    astral_lat = cfg.get("astral_latitude")
+    astral_lng = cfg.get("astral_longitude")
+    astral_elev = cfg.get("astral_elevation", 0.0)
+    currents_station_id = cfg.get("currents_station_id", "CAB1401")
+    nws_office = cfg.get("nws_office", "GYX")
+    nws_zone = cfg.get("nws_zone", "ANZ153")
 
     print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Scraping station {station_id} ({units}, {datum})...")
     
@@ -84,12 +86,12 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     except Exception as e:
         print(f"Scraper: Warning: failed to fetch exact tide extremes: {e}")
 
-    # Fetch predicted currents data for nearby station CAB1401 (Portland Harbor Entrance)
+    # Fetch predicted currents data
     current_predictions = []
     try:
         currents_url = (
             f"https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
-            f"?product=currents_predictions&station=CAB1401"
+            f"?product=currents_predictions&station={currents_station_id}"
             f"&begin_date={begin_date}&end_date={end_date}"
             f"&units=english&time_zone=lst_ldt&format=json"
         )
@@ -135,16 +137,6 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
         print(f"Scraper: Warning: failed to fetch water temperature: {e}")
 
     # Fetch NWS Coastal Waters Forecast for Casco Bay
-    nws_office = "GYX"
-    nws_zone = "ANZ153"
-    try:
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                cfg = json.load(f)
-                nws_office = cfg.get("nws_office", "GYX")
-                nws_zone = cfg.get("nws_zone", "ANZ153")
-    except Exception as e:
-        print(f"Scraper: Warning: failed to load NWS config parameters: {e}")
 
     marine_forecast = []
     try:
@@ -279,6 +271,7 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     output_data = {
         "station_id": station_id,
         "station_name": station_name,
+        "currents_station_id": currents_station_id,
         "date": station_today.strftime("%Y-%m-%d"),
         "units": units,
         "datum": datum,

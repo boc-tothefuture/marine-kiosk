@@ -37,6 +37,7 @@ export interface ParsedWind {
 export interface State {
 	stationId: string;
 	stationName: string;
+	currentsStationId: string;
 	dateStr: string;
 	tideHeights: TidePoint[];
 	tideExtremes: TideExtreme[];
@@ -74,6 +75,7 @@ export interface Elements {
 	moonPhaseName: HTMLElement | null;
 
 	metaStationId: HTMLElement | null;
+	metaCurrentsStationId: HTMLElement | null;
 	lastUpdatedText: HTMLElement | null;
 
 	tidelogGridLines: SVGElement | null;

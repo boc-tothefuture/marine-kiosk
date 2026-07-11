@@ -17,6 +17,7 @@ def load_config(config_path=None):
     
     default_config = {
         "station_id": "8418150",
+        "currents_station_id": "CAB1401",
         "units": "english",
         "datum": "MLLW",
         "port": 8081,

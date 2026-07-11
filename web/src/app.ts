@@ -14,6 +14,7 @@ import {
 const state: State = {
 	stationId: "8418150",
 	stationName: "PORTLAND HARBOR",
+	currentsStationId: "CAB1401",
 	dateStr: "",
 	tideHeights: [],
 	tideExtremes: [],
@@ -51,6 +52,7 @@ const elements: Elements = {
 	moonPhaseName: document.getElementById("moon-phase-name"),
 
 	metaStationId: document.getElementById("meta-station-id"),
+	metaCurrentsStationId: document.getElementById("meta-currents-station-id"),
 	lastUpdatedText: document.getElementById("last-updated-text"),
 
 	tidelogGridLines: document.getElementById(
@@ -192,6 +194,7 @@ function processTideData(data: any): void {
 
 	state.stationId = data.station_id;
 	state.stationName = data.station_name.toUpperCase();
+	state.currentsStationId = data.currents_station_id || "CAB1401";
 	state.dateStr = data.date;
 	state.tideHeights = (data.tide_heights || []).map(parseTime);
 	state.tideExtremes = (data.tide_extremes || []).map(parseTime);
@@ -212,6 +215,8 @@ function updateUI(): void {
 		elements.stationName.textContent = state.stationName;
 	if (elements.metaStationId)
 		elements.metaStationId.textContent = state.stationId;
+	if (elements.metaCurrentsStationId)
+		elements.metaCurrentsStationId.textContent = state.currentsStationId;
 	if (elements.currentTideUnit)
 		elements.currentTideUnit.textContent =
 			state.units === "english" ? "FT" : "M";
