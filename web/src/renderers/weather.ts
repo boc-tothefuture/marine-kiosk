@@ -154,12 +154,15 @@ export function getSeverityClass(
 	return "normal";
 }
 
-export function getForecastPeriodsForSelectedDay(state: State): {
+export function getForecastPeriodsForDayOffset(
+	state: State,
+	offset: number,
+): {
 	dayPeriod?: MarinePeriod;
 	nightPeriod?: MarinePeriod;
 } {
 	const targetDate = new Date();
-	targetDate.setDate(targetDate.getDate() + state.selectedDayOffset);
+	targetDate.setDate(targetDate.getDate() + offset);
 
 	const dayOfWeekStr = targetDate
 		.toLocaleDateString("en-US", { weekday: "short" })
@@ -168,7 +171,7 @@ export function getForecastPeriodsForSelectedDay(state: State): {
 	let dayPeriod: MarinePeriod | undefined;
 	let nightPeriod: MarinePeriod | undefined;
 
-	if (state.selectedDayOffset === 0) {
+	if (offset === 0) {
 		dayPeriod = state.marineForecast.find(
 			(p) => p.name === "TODAY" || p.name === "THIS DAY",
 		);
@@ -206,52 +209,85 @@ export function renderForecast(state: State, elements: Elements): void {
 		return;
 	}
 
-	const { dayPeriod, nightPeriod } = getForecastPeriodsForSelectedDay(state);
+	const day1 = getForecastPeriodsForDayOffset(state, 0);
+	const day2 = getForecastPeriodsForDayOffset(state, 1);
 
-	const activeDayPeriod = dayPeriod || {
+	const activeDay1Period = day1.dayPeriod || {
 		name: "Day",
 		text: "Forecast not available.",
 	};
-	const activeNightPeriod = nightPeriod || {
+	const activeNight1Period = day1.nightPeriod || {
+		name: "Night",
+		text: "Forecast not available.",
+	};
+	const activeDay2Period = day2.dayPeriod || {
+		name: "Day",
+		text: "Forecast not available.",
+	};
+	const activeNight2Period = day2.nightPeriod || {
 		name: "Night",
 		text: "Forecast not available.",
 	};
 
-	// Parse parameters
-	const dayWind = parseWind(activeDayPeriod.text);
-	const daySeas = parseSeas(activeDayPeriod.text);
-	const daySeverity = getSeverityClass(dayWind, daySeas);
+	// Parse parameters Day 1
+	const day1Wind = parseWind(activeDay1Period.text);
+	const day1Seas = parseSeas(activeDay1Period.text);
+	const day1Severity = getSeverityClass(day1Wind, day1Seas);
+	const night1Wind = parseWind(activeNight1Period.text);
+	const night1Seas = parseSeas(activeNight1Period.text);
+	const night1Severity = getSeverityClass(night1Wind, night1Seas);
 
-	const nightWind = parseWind(activeNightPeriod.text);
-	const nightSeas = parseSeas(activeNightPeriod.text);
-	const nightSeverity = getSeverityClass(nightWind, nightSeas);
+	// Parse parameters Day 2
+	const day2Wind = parseWind(activeDay2Period.text);
+	const day2Seas = parseSeas(activeDay2Period.text);
+	const day2Severity = getSeverityClass(day2Wind, day2Seas);
+	const night2Wind = parseWind(activeNight2Period.text);
+	const night2Seas = parseSeas(activeNight2Period.text);
+	const night2Severity = getSeverityClass(night2Wind, night2Seas);
 
-	// Create 3 blocks representing 24 hours:
-	// 00:00 - 06:00 (Night, 25% width), 06:00 - 18:00 (Day, 50% width), 18:00 - 24:00 (Night, 25% width)
+	// 6 blocks covering 48 hours
 	const blocks = [
 		{
-			title: "Early AM (Night)",
-			width: "25%",
-			wind: nightWind,
-			seas: nightSeas,
-			severity: nightSeverity,
-			text: activeNightPeriod.text,
+			title: "Early AM",
+			width: "12.5%",
+			wind: night1Wind,
+			seas: night1Seas,
+			severity: night1Severity,
 		},
 		{
 			title: "Daytime",
-			width: "50%",
-			wind: dayWind,
-			seas: daySeas,
-			severity: daySeverity,
-			text: activeDayPeriod.text,
+			width: "25%",
+			wind: day1Wind,
+			seas: day1Seas,
+			severity: day1Severity,
 		},
 		{
-			title: "Late PM (Night)",
+			title: "Late PM",
+			width: "12.5%",
+			wind: night1Wind,
+			seas: night1Seas,
+			severity: night1Severity,
+		},
+		{
+			title: "Early AM (Tom)",
+			width: "12.5%",
+			wind: night2Wind,
+			seas: night2Seas,
+			severity: night2Severity,
+		},
+		{
+			title: "Daytime (Tom)",
 			width: "25%",
-			wind: nightWind,
-			seas: nightSeas,
-			severity: nightSeverity,
-			text: activeNightPeriod.text,
+			wind: day2Wind,
+			seas: day2Seas,
+			severity: day2Severity,
+		},
+		{
+			title: "Late PM (Tom)",
+			width: "12.5%",
+			wind: night2Wind,
+			seas: night2Seas,
+			severity: night2Severity,
 		},
 	];
 

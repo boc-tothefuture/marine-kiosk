@@ -123,3 +123,18 @@ export function setLabelPositionAndText(
 	if (text !== null) element.textContent = text;
 	element.style.display = "block";
 }
+
+export function get48HourRange(): [number, number] {
+	const base = new Date();
+	const start = new Date(
+		base.getFullYear(),
+		base.getMonth(),
+		base.getDate(),
+		0,
+		0,
+		0,
+		0,
+	).getTime();
+	const end = start + 48 * 3600 * 1000 - 1;
+	return [start, end];
+}

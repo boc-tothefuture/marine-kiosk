@@ -3,6 +3,7 @@ import { drawTidelogGrid, renderTidelogGraph } from "./renderers/tideGraph";
 import { renderForecast } from "./renderers/weather";
 import type { Elements, State } from "./types";
 import {
+	get48HourRange,
 	getCurrentSpeedAtTime,
 	getSvgYCoordinate,
 	getTargetDayRange,
@@ -38,11 +39,10 @@ const elements: Elements = {
 	extremesList: document.getElementById("extremes-list"),
 	forecastList: document.getElementById("forecast-list"),
 	weatherTimelineBar: document.getElementById("weather-timeline-bar"),
+	tidelogContent: document.getElementById("tidelog-content"),
 
-	btnToday: document.getElementById("btn-today") as HTMLButtonElement | null,
-	btnTomorrow: document.getElementById(
-		"btn-tomorrow",
-	) as HTMLButtonElement | null,
+	badgeToday: document.getElementById("badge-today"),
+	badgeTomorrow: document.getElementById("badge-tomorrow"),
 
 	sunRiseTime: document.getElementById("sun-rise-time"),
 	sunSetTime: document.getElementById("sun-set-time"),
@@ -97,6 +97,25 @@ const elements: Elements = {
 		"sunset-time-label",
 	) as SVGTextElement | null,
 
+	sunriseLine2: document.getElementById(
+		"sunrise-line-2",
+	) as SVGLineElement | null,
+	sunsetLine2: document.getElementById(
+		"sunset-line-2",
+	) as SVGLineElement | null,
+	sunriseTextLabel2: document.getElementById(
+		"sunrise-text-label-2",
+	) as SVGTextElement | null,
+	sunriseTimeLabel2: document.getElementById(
+		"sunrise-time-label-2",
+	) as SVGTextElement | null,
+	sunsetTextLabel2: document.getElementById(
+		"sunset-text-label-2",
+	) as SVGTextElement | null,
+	sunsetTimeLabel2: document.getElementById(
+		"sunset-time-label-2",
+	) as SVGTextElement | null,
+
 	moonriseLine: document.getElementById(
 		"moonrise-line",
 	) as SVGLineElement | null,
@@ -114,8 +133,28 @@ const elements: Elements = {
 		"moonset-time-label",
 	) as SVGTextElement | null,
 
+	moonriseLine2: document.getElementById(
+		"moonrise-line-2",
+	) as SVGLineElement | null,
+	moonsetLine2: document.getElementById(
+		"moonset-line-2",
+	) as SVGLineElement | null,
+	moonriseTextLabel2: document.getElementById(
+		"moonrise-text-label-2",
+	) as SVGTextElement | null,
+	moonriseTimeLabel2: document.getElementById(
+		"moonrise-time-label-2",
+	) as SVGTextElement | null,
+	moonsetTextLabel2: document.getElementById(
+		"moonset-text-label-2",
+	) as SVGTextElement | null,
+	moonsetTimeLabel2: document.getElementById(
+		"moonset-time-label-2",
+	) as SVGTextElement | null,
+
 	tideOverlayLabels: document.getElementById("tide-overlay-labels"),
 	currentsEventsWrapper: document.getElementById("currents-events-wrapper"),
+	scrollableTimeline: document.getElementById("scrollable-timeline"),
 
 	currentsFloodPath: document.getElementById(
 		"currents-flood-path",
@@ -131,36 +170,47 @@ const elements: Elements = {
 // --- Initialization ---
 
 window.addEventListener("DOMContentLoaded", () => {
-	setupDayNavigation();
+	startAutoTransitionTimer();
 	loadData();
 	setInterval(updateClock, 1000);
 	setInterval(loadData, 10 * 60 * 1000);
 });
 
-function setupDayNavigation(): void {
-	const btnToday = elements.btnToday;
-	const btnTomorrow = elements.btnTomorrow;
-	if (btnToday && btnTomorrow) {
-		btnToday.addEventListener("click", () =>
-			handleDayToggle(0, btnToday, btnTomorrow),
-		);
-		btnTomorrow.addEventListener("click", () =>
-			handleDayToggle(1, btnTomorrow, btnToday),
-		);
-	}
-}
+function startAutoTransitionTimer(): void {
+	const transitionDurationMs = 15000; // Transition every 15 seconds
 
-function handleDayToggle(
-	offset: number,
-	activeBtn: HTMLButtonElement,
-	inactiveBtn: HTMLButtonElement,
-): void {
-	if (state.selectedDayOffset !== offset) {
-		state.selectedDayOffset = offset;
-		activeBtn.classList.add("active");
-		inactiveBtn.classList.remove("active");
-		updateUI();
-	}
+	setInterval(() => {
+		const currentOffset = state.selectedDayOffset;
+		const nextOffset = currentOffset === 0 ? 1 : 0;
+		const timeline = elements.scrollableTimeline;
+
+		// Update viewed offset
+		state.selectedDayOffset = nextOffset;
+
+		// Slide the timeline container horizontally
+		if (timeline) {
+			if (nextOffset === 0) {
+				timeline.style.transform = "translateX(0%)";
+			} else {
+				timeline.style.transform = "translateX(-50%)";
+			}
+		}
+
+		// Update badges active class
+		if (elements.badgeToday && elements.badgeTomorrow) {
+			if (nextOffset === 0) {
+				elements.badgeToday.classList.add("active");
+				elements.badgeTomorrow.classList.remove("active");
+			} else {
+				elements.badgeTomorrow.classList.add("active");
+				elements.badgeToday.classList.remove("active");
+			}
+		}
+
+		// Update astro details and header clock/date
+		updateAstronomicalDetails(state, elements);
+		updateDateHeader();
+	}, transitionDurationMs);
 }
 
 // --- Data Fetching & Processing ---
@@ -302,15 +352,15 @@ function renderExtremes(): void {
 
 function updateNowTracker(now: Date): void {
 	const nowMs = now.getTime();
-	const [startMs, endMs] = getTargetDayRange(state);
-	const duration = 24 * 3600 * 1000;
+	const [startMs, endMs] = get48HourRange();
+	const duration = 48 * 3600 * 1000;
 
-	if (state.selectedDayOffset === 0 && nowMs >= startMs && nowMs <= endMs) {
+	if (nowMs >= startMs && nowMs <= endMs) {
 		if (elements.nowMarkerLine) {
 			elements.nowMarkerLine.style.display = "block";
 			const xPct = ((nowMs - startMs) / duration) * 100;
-			elements.nowMarkerLine.setAttribute("x1", String(xPct * 10));
-			elements.nowMarkerLine.setAttribute("x2", String(xPct * 10));
+			elements.nowMarkerLine.setAttribute("x1", String(xPct * 20));
+			elements.nowMarkerLine.setAttribute("x2", String(xPct * 20));
 		}
 		if (elements.nowMarkerDot) {
 			elements.nowMarkerDot.style.display = "block";

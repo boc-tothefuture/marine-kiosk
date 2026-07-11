@@ -95,13 +95,13 @@ body {
 	gap: 8px;
 }
 
-/* Day Selection Buttons */
+/* Day Selection Badges (Non-interactive) */
 #day-navigation {
 	display: flex;
 	gap: 8px;
 }
 
-.nav-btn {
+.nav-badge {
 	background: rgba(255, 255, 255, 0.04);
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	color: var(--text-muted);
@@ -110,22 +110,16 @@ body {
 	font-family: "Outfit", sans-serif;
 	font-size: 0.85rem;
 	font-weight: 600;
-	cursor: pointer;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
-	transition: all 0.2s ease;
+	transition: all 0.3s ease;
 }
 
-.nav-btn.active {
+.nav-badge.active {
 	background: var(--accent-color);
 	color: #030712;
 	border-color: var(--accent-color);
 	box-shadow: 0 0 12px rgba(6, 182, 212, 0.35);
-}
-
-.nav-btn:hover:not(.active) {
-	background: rgba(255, 255, 255, 0.1);
-	color: var(--text-color);
 }
 
 #digital-time {
@@ -280,11 +274,21 @@ body {
 	background: rgba(15, 23, 42, 0.25);
 	border: 1px solid var(--border-color);
 	border-radius: 16px;
-	padding: 24px;
+	padding: 40px 24px 24px 24px;
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
 	box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+	overflow: hidden;
+}
+
+#scrollable-timeline {
+	width: 200%;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+	transform: translateX(0);
 }
 
 #tidelog-svg {
@@ -347,7 +351,7 @@ body {
 /* High/Low callouts overlay */
 #tide-overlay-labels {
 	position: absolute;
-	top: 24px; /* matches parent padding */
+	top: 40px; /* matches parent padding */
 	left: 24px;
 	right: 24px;
 	height: 55vh; /* matches SVG height */

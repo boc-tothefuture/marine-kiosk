@@ -25,14 +25,14 @@ export function renderCurrentsPaths(
 	duration: number,
 	getVelocityY: (kt: number) => number,
 ): void {
-	const steps = 144;
+	const steps = 288;
 	let mainStrokeD = "";
 	let floodFillD = "M 0 40";
 	let ebbFillD = "M 0 40";
 
 	for (let i = 0; i <= steps; i++) {
 		const tMs = startMs + (i / steps) * duration;
-		const x = (i / steps) * 1000;
+		const x = (i / steps) * 2000;
 		const ktVal = getCurrentSpeedAtTime(state, tMs);
 		const y = getVelocityY(ktVal);
 
@@ -53,9 +53,9 @@ export function renderCurrentsPaths(
 	if (elements.currentsStrokePath)
 		elements.currentsStrokePath.setAttribute("d", mainStrokeD);
 	if (elements.currentsFloodPath)
-		elements.currentsFloodPath.setAttribute("d", `${floodFillD} L 1000 40 Z`);
+		elements.currentsFloodPath.setAttribute("d", `${floodFillD} L 2000 40 Z`);
 	if (elements.currentsEbbPath)
-		elements.currentsEbbPath.setAttribute("d", `${ebbFillD} L 1000 40 Z`);
+		elements.currentsEbbPath.setAttribute("d", `${ebbFillD} L 2000 40 Z`);
 }
 
 export function detectCurrentsEvents(
@@ -170,7 +170,7 @@ export function renderCurrentsTimeline(
 
 	if (dayPredictions.length === 0) return;
 
-	const duration = 24 * 3600 * 1000;
+	const duration = endMs - startMs;
 	const maxKt = calculateMaxCurrentsVelocity(dayPredictions);
 
 	const getVelocityY = (kt: number) => {

@@ -29,8 +29,8 @@
 
         <div class="header-center">
           <div id="day-navigation">
-            <button id="btn-today" class="nav-btn active">Today</button>
-            <button id="btn-tomorrow" class="nav-btn">Tomorrow</button>
+            <span id="badge-today" class="nav-badge active">Today</span>
+            <span id="badge-tomorrow" class="nav-badge">Tomorrow</span>
           </div>
           <div id="digital-time">--:--<span>--</span></div>
         </div>
@@ -52,9 +52,10 @@
         <!-- Central Tidelog Graph Visualizer -->
         <section class="center-graph-panel">
           <div class="graph-instrument">
+            <div id="scrollable-timeline">
 
             <!-- SVG Plotting Canvas -->
-            <svg id="tidelog-svg" viewBox="0 0 1000 400" preserveAspectRatio="none">
+            <svg id="tidelog-svg" viewBox="0 0 2000 400" preserveAspectRatio="none">
               <defs>
                 <!-- Sun Daylight Shading Gradient (behind curve) -->
                 <linearGradient id="sun-fill-grad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -122,6 +123,42 @@
               <text id="moonset-time-label" x="0" y="-8" fill="#64748b" font-family="'Outfit', sans-serif"
                 font-size="10" font-weight="600" text-anchor="middle" opacity="0.85"></text>
 
+              <!-- Sunrise/Sunset Vertical Lines & Labels (Day 2) -->
+              <line id="sunrise-line-2" x1="0" y1="0" x2="0" y2="340" stroke="#fbbf24" stroke-dasharray="3,6"
+                stroke-width="1.5" opacity="0.5" />
+              <line id="sunset-line-2" x1="0" y1="0" x2="0" y2="340" stroke="#fbbf24" stroke-dasharray="3,6"
+                stroke-width="1.5" opacity="0.5" />
+
+              <!-- Sunrise Stacked Label (Day 2) -->
+              <text id="sunrise-text-label-2" x="0" y="-20" fill="#fbbf24" font-family="'Outfit', sans-serif"
+                font-size="9" font-weight="400" text-anchor="middle" opacity="0.7">Sunrise</text>
+              <text id="sunrise-time-label-2" x="0" y="-8" fill="#fbbf24" font-family="'Outfit', sans-serif"
+                font-size="10" font-weight="600" text-anchor="middle" opacity="0.85"></text>
+
+              <!-- Sunset Stacked Label (Day 2) -->
+              <text id="sunset-text-label-2" x="0" y="-20" fill="#fbbf24" font-family="'Outfit', sans-serif" font-size="9"
+                font-weight="400" text-anchor="middle" opacity="0.7">Sunset</text>
+              <text id="sunset-time-label-2" x="0" y="-8" fill="#fbbf24" font-family="'Outfit', sans-serif" font-size="10"
+                font-weight="600" text-anchor="middle" opacity="0.85"></text>
+
+              <!-- Moonrise/Moonset Vertical Lines & Labels (Day 2) -->
+              <line id="moonrise-line-2" x1="0" y1="0" x2="0" y2="340" stroke="#64748b" stroke-dasharray="3,6"
+                stroke-width="1.5" opacity="0.5" />
+              <line id="moonset-line-2" x1="0" y1="0" x2="0" y2="340" stroke="#64748b" stroke-dasharray="3,6"
+                stroke-width="1.5" opacity="0.5" />
+
+              <!-- Moonrise Stacked Label (Day 2) -->
+              <text id="moonrise-text-label-2" x="0" y="-20" fill="#64748b" font-family="'Outfit', sans-serif"
+                font-size="9" font-weight="400" text-anchor="middle" opacity="0.7">Moonrise</text>
+              <text id="moonrise-time-label-2" x="0" y="-8" fill="#64748b" font-family="'Outfit', sans-serif"
+                font-size="10" font-weight="600" text-anchor="middle" opacity="0.85"></text>
+
+              <!-- Moonset Stacked Label (Day 2) -->
+              <text id="moonset-text-label-2" x="0" y="-20" fill="#64748b" font-family="'Outfit', sans-serif"
+                font-size="9" font-weight="400" text-anchor="middle" opacity="0.7">Moonset</text>
+              <text id="moonset-time-label-2" x="0" y="-8" fill="#64748b" font-family="'Outfit', sans-serif"
+                font-size="10" font-weight="600" text-anchor="middle" opacity="0.85"></text>
+
               <!-- Dotted Lunar Transit Arc -->
               <path id="lunar-transit-path" d="" fill="none" stroke="#64748b" stroke-dasharray="3,6"
                 stroke-width="1.5" />
@@ -166,7 +203,7 @@
 
               <div id="currents-timeline-bar" style="position: relative; height: 80px; margin-top: 10px;">
                 <!-- Symmetrical SVG Current Velocity Canvas -->
-                <svg id="currents-svg" viewBox="0 0 1000 80" preserveAspectRatio="none"
+                <svg id="currents-svg" viewBox="0 0 2000 80" preserveAspectRatio="none"
                   style="width: 100%; height: 100%; display: block; overflow: visible;">
                   <defs>
                     <!-- Flood Curve Gradient (Teal) -->
@@ -208,10 +245,11 @@
             </div>
 
           </div>
+          </div>
         </section>
 
 
-      </main>
+        </main>
 
       <!-- Footer Info -->
       <footer id="tidelog-footer">

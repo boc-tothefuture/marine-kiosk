@@ -64,8 +64,8 @@ export interface Elements {
 	forecastList: HTMLElement | null;
 	weatherTimelineBar: HTMLElement | null;
 
-	btnToday: HTMLButtonElement | null;
-	btnTomorrow: HTMLButtonElement | null;
+	badgeToday: HTMLElement | null;
+	badgeTomorrow: HTMLElement | null;
 
 	sunRiseTime: HTMLElement | null;
 	sunSetTime: HTMLElement | null;
@@ -96,6 +96,13 @@ export interface Elements {
 	sunsetTextLabel: SVGTextElement | null;
 	sunsetTimeLabel: SVGTextElement | null;
 
+	sunriseLine2: SVGLineElement | null;
+	sunsetLine2: SVGLineElement | null;
+	sunriseTextLabel2: SVGTextElement | null;
+	sunriseTimeLabel2: SVGTextElement | null;
+	sunsetTextLabel2: SVGTextElement | null;
+	sunsetTimeLabel2: SVGTextElement | null;
+
 	moonriseLine: SVGLineElement | null;
 	moonsetLine: SVGLineElement | null;
 	moonriseTextLabel: SVGTextElement | null;
@@ -103,8 +110,17 @@ export interface Elements {
 	moonsetTextLabel: SVGTextElement | null;
 	moonsetTimeLabel: SVGTextElement | null;
 
+	moonriseLine2: SVGLineElement | null;
+	moonsetLine2: SVGLineElement | null;
+	moonriseTextLabel2: SVGTextElement | null;
+	moonriseTimeLabel2: SVGTextElement | null;
+	moonsetTextLabel2: SVGTextElement | null;
+	moonsetTimeLabel2: SVGTextElement | null;
+
 	tideOverlayLabels: HTMLElement | null;
 	currentsEventsWrapper: HTMLElement | null;
+	tidelogContent: HTMLElement | null;
+	scrollableTimeline: HTMLElement | null;
 
 	currentsFloodPath: SVGPathElement | null;
 	currentsEbbPath: SVGPathElement | null;
