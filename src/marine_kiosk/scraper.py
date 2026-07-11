@@ -38,7 +38,9 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Scraping station {station_id} ({units}, {datum})...")
     
     station = Station(id=station_id)
-    station_name = getattr(station, "name", f"Station {station_id}")
+    raw_station_name = getattr(station, "name", f"Station {station_id}")
+    station_name = raw_station_name.split(",")[0].strip() if "," in raw_station_name else raw_station_name
+    station_name = station_name.replace(" IS.", " ISLAND").replace(" PT.", " POINT").replace(" ENT.", " ENTRANCE")
     output_station_id = station_id
 
     # Check if this is a subordinate station using NOAA Metadata API
@@ -260,13 +262,28 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     try:
         temp_begin = (now - datetime.timedelta(days=1)).strftime("%Y%m%d")
         temp_end = now.strftime("%Y%m%d")
-        df_temp = station.get_data(
-            begin_date=temp_begin,
-            end_date=temp_end,
-            product="water_temperature",
-            units=units,
-            time_zone="lst_ldt"
-        )
+        temp_station = station
+        try:
+            df_temp = temp_station.get_data(
+                begin_date=temp_begin,
+                end_date=temp_end,
+                product="water_temperature",
+                units=units,
+                time_zone="lst_ldt"
+            )
+        except Exception as e:
+            if is_subordinate:
+                print(f"Scraper: Water temp not available for subordinate station. Falling back to reference station {ref_station_id}...")
+                temp_station = ref_station
+                df_temp = temp_station.get_data(
+                    begin_date=temp_begin,
+                    end_date=temp_end,
+                    product="water_temperature",
+                    units=units,
+                    time_zone="lst_ldt"
+                )
+            else:
+                raise e
         if not df_temp.empty:
             valid_temps = df_temp["v"].dropna()
             if not valid_temps.empty:
