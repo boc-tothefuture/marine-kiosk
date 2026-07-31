@@ -87,6 +87,7 @@ html, body {
 	font-size: 0.95rem;
 	font-weight: 300;
 	color: var(--text-muted);
+	transition: opacity 1s ease;
 }
 
 .header-center {
@@ -114,7 +115,7 @@ html, body {
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
-	transition: all 0.3s ease;
+	transition: all 2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .nav-badge.active {
@@ -224,6 +225,7 @@ html, body {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
+	transition: opacity 1s ease;
 }
 
 .data-item {
@@ -289,7 +291,7 @@ html, body {
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
-	transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+	transition: transform 2s cubic-bezier(0.25, 1, 0.5, 1);
 	transform: translateX(0);
 }
 

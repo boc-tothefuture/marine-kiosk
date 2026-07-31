@@ -176,9 +176,33 @@ window.addEventListener("DOMContentLoaded", () => {
 	setInterval(loadData, 10 * 60 * 1000);
 });
 
-function startAutoTransitionTimer(): void {
-	const transitionDurationMs = 15000; // Transition every 15 seconds
+// How long each day's view is held before flipping to the other day.
+const DAY_HOLD_MS = 20000;
+// How long the slide/crossfade transition itself takes. Kept in sync with
+// the #scrollable-timeline and .nav-badge CSS transition durations.
+const DAY_TRANSITION_MS = 2000;
 
+// Fades an element out, swaps its content at the midpoint (while invisible),
+// then fades it back in, so text/list changes don't pop instantly while the
+// graph is still mid-slide.
+function crossfadeUpdate(
+	el: HTMLElement | null,
+	updateFn: () => void,
+	totalDurationMs: number,
+): void {
+	if (!el) {
+		updateFn();
+		return;
+	}
+	const half = totalDurationMs / 2;
+	el.style.opacity = "0";
+	setTimeout(() => {
+		updateFn();
+		el.style.opacity = "1";
+	}, half);
+}
+
+function startAutoTransitionTimer(): void {
 	setInterval(() => {
 		const currentOffset = state.selectedDayOffset;
 		const nextOffset = currentOffset === 0 ? 1 : 0;
@@ -207,10 +231,14 @@ function startAutoTransitionTimer(): void {
 			}
 		}
 
-		// Update astro details and header clock/date
+		// Crossfade the date header and extremes list in step with the slide,
+		// instead of snapping their content instantly.
+		crossfadeUpdate(elements.digitalDate, updateDateHeader, DAY_TRANSITION_MS);
+		crossfadeUpdate(elements.extremesList, renderExtremes, DAY_TRANSITION_MS);
+
+		// Update astro details
 		updateAstronomicalDetails(state, elements);
-		updateDateHeader();
-	}, transitionDurationMs);
+	}, DAY_HOLD_MS);
 }
 
 // --- Data Fetching & Processing ---
