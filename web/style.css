@@ -333,9 +333,67 @@ html, body {
 	filter: drop-shadow(0 0 3px rgba(6, 182, 212, 0.4));
 }
 
-/* NOW Marker */
+.tidelog-svg-wrapper {
+	position: relative;
+	width: 100%;
+	height: 55vh;
+}
+
+/* NOW Marker Overlay Elements */
+#now-marker-container {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 10;
+}
+
 #now-marker-line {
 	filter: drop-shadow(0 0 2px rgba(225, 29, 72, 0.4));
+}
+
+#now-marker-badge {
+	position: absolute;
+	top: -24px;
+	transform: translateX(-50%);
+	background-color: #e11d48;
+	color: #ffffff;
+	font-family: "Outfit", sans-serif;
+	font-size: 0.68rem;
+	font-weight: 800;
+	letter-spacing: 0.1em;
+	padding: 3px 8px;
+	border-radius: 4px;
+	pointer-events: none;
+	z-index: 12;
+	box-shadow: 0 0 10px rgba(225, 29, 72, 0.7);
+	white-space: nowrap;
+	text-transform: uppercase;
+}
+
+#now-marker-badge::after {
+	content: "";
+	position: absolute;
+	bottom: -5px;
+	left: 50%;
+	transform: translateX(-50%);
+	border-width: 5px 5px 0 5px;
+	border-style: solid;
+	border-color: #e11d48 transparent transparent transparent;
+}
+
+@keyframes now-pulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.7);
+	}
+	70% {
+		box-shadow: 0 0 0 8px rgba(225, 29, 72, 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+	}
 }
 
 #now-marker-dot {
@@ -348,17 +406,17 @@ html, body {
 	transform: translate(-50%, -50%);
 	pointer-events: none;
 	z-index: 10;
-	box-shadow: 0 0 6px rgba(225, 29, 72, 0.7);
+	animation: now-pulse 2s infinite;
 	transition: opacity 0.3s ease;
 }
 
 /* High/Low callouts overlay */
 #tide-overlay-labels {
 	position: absolute;
-	top: 40px; /* matches parent padding */
-	left: 24px;
-	right: 24px;
-	height: 55vh; /* matches SVG height */
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
 	pointer-events: none;
 }
 

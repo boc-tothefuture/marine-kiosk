@@ -81,6 +81,7 @@ const elements: Elements = {
 		"now-marker-line",
 	) as SVGLineElement | null,
 	nowMarkerDot: document.getElementById("now-marker-dot"),
+	nowMarkerBadge: document.getElementById("now-marker-badge"),
 
 	sunriseLine: document.getElementById("sunrise-line") as SVGLineElement | null,
 	sunsetLine: document.getElementById("sunset-line") as SVGLineElement | null,
@@ -384,15 +385,18 @@ function updateNowTracker(now: Date): void {
 	const duration = 48 * 3600 * 1000;
 
 	if (nowMs >= startMs && nowMs <= endMs) {
+		const xPct = ((nowMs - startMs) / duration) * 100;
 		if (elements.nowMarkerLine) {
 			elements.nowMarkerLine.style.display = "block";
-			const xPct = ((nowMs - startMs) / duration) * 100;
 			elements.nowMarkerLine.setAttribute("x1", String(xPct * 20));
 			elements.nowMarkerLine.setAttribute("x2", String(xPct * 20));
 		}
+		if (elements.nowMarkerBadge) {
+			elements.nowMarkerBadge.style.display = "block";
+			elements.nowMarkerBadge.style.left = `${xPct}%`;
+		}
 		if (elements.nowMarkerDot) {
 			elements.nowMarkerDot.style.display = "block";
-			const xPct = ((nowMs - startMs) / duration) * 100;
 			const currentHeight = getTideHeightAtTime(state, nowMs);
 			const yPct = (getSvgYCoordinate(currentHeight) / 400) * 100;
 			elements.nowMarkerDot.style.left = `${xPct}%`;
@@ -426,6 +430,7 @@ function updateNowTracker(now: Date): void {
 		}
 	} else {
 		if (elements.nowMarkerLine) elements.nowMarkerLine.style.display = "none";
+		if (elements.nowMarkerBadge) elements.nowMarkerBadge.style.display = "none";
 		if (elements.nowMarkerDot) elements.nowMarkerDot.style.display = "none";
 		if (elements.currentTideVal) elements.currentTideVal.textContent = "--";
 		if (elements.currentTideSlope) elements.currentTideSlope.textContent = "";

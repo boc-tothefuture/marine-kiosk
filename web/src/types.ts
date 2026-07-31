@@ -88,6 +88,7 @@ export interface Elements {
 	moonIndicatorIcon: SVGTextElement | null;
 	nowMarkerLine: SVGLineElement | null;
 	nowMarkerDot: HTMLElement | null;
+	nowMarkerBadge: HTMLElement | null;
 
 	sunriseLine: SVGLineElement | null;
 	sunsetLine: SVGLineElement | null;
