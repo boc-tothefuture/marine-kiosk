@@ -122,8 +122,31 @@ export function renderCurrentsEventLabels(
 	if (!elements.currentsEventsWrapper) return;
 
 	for (const event of events) {
-		const xPct = ((event.timeMs - startMs) / duration) * 100;
-		if (xPct < 2.5 || xPct > 97.5) continue;
+		const rawXPct = ((event.timeMs - startMs) / duration) * 100;
+		// Clamp near-edge events onto the visible edge instead of dropping them
+		// silently - a slack point right at the day boundary should still show.
+		const xPct = Math.max(2.5, Math.min(97.5, rawXPct));
+
+		const timeStr = new Date(event.timeMs)
+			.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+			.replace(" ", "");
+		// getVelocityY returns a coordinate in the SVG's own 0-80 viewBox space.
+		// #currents-timeline-bar's height is now a responsive clamp() (see
+		// style.css), not a fixed 80px, so these overlay divs must be
+		// positioned by percentage - like the tide callouts already are - not
+		// by treating the SVG y-unit as a literal CSS px offset.
+		const yPct = (getVelocityY(event.value) / 80) * 100;
+
+		if (event.type === "slack") {
+			// Anchor a small dot right on the zero line at the exact crossing
+			// point, same pattern as the "NOW" dot on the main tide graph, so
+			// slack isn't just a floating label disconnected from the curve.
+			const dot = document.createElement("div");
+			dot.className = "currents-slack-dot";
+			dot.style.left = `${xPct}%`;
+			dot.style.top = `${yPct}%`;
+			elements.currentsEventsWrapper.appendChild(dot);
+		}
 
 		const div = document.createElement("div");
 		div.className = `currents-event ${event.type}`;
@@ -131,20 +154,15 @@ export function renderCurrentsEventLabels(
 		div.style.left = `${xPct}%`;
 		div.style.transform = "translateX(-50%)";
 
-		const timeStr = new Date(event.timeMs)
-			.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-			.replace(" ", "");
-		const yCoord = getVelocityY(event.value);
-
 		if (event.type === "flood") {
-			div.style.top = `${yCoord - 25}px`;
+			div.style.top = `calc(${yPct}% - 25px)`;
 			div.innerHTML = `<span class="currents-event-val" style="color: #06b6d4; font-weight:600; display:block; font-size:0.75rem; text-align: center;">↑ ${event.value.toFixed(1)} KT</span><span class="currents-event-time" style="display:block; font-size:0.65rem; opacity:0.6; text-align: center;">${timeStr}</span>`;
 		} else if (event.type === "ebb") {
-			div.style.top = `${yCoord + 2}px`;
+			div.style.top = `calc(${yPct}% + 2px)`;
 			div.innerHTML = `<span class="currents-event-val" style="color: #ec4899; font-weight:600; display:block; font-size:0.75rem; text-align: center;">↓ ${Math.abs(event.value).toFixed(1)} KT</span><span class="currents-event-time" style="display:block; font-size:0.65rem; opacity:0.6; text-align: center;">${timeStr}</span>`;
 		} else {
-			div.style.top = "28px";
-			div.innerHTML = `<span class="currents-event-arrow" style="display:block; font-size:0.75rem; color:#64748b; font-weight:bold; text-align: center;">◇</span><span class="currents-event-time" style="display:block; font-size:0.6rem; color:#64748b; text-align: center; margin-top: 2px;">${timeStr}</span>`;
+			div.style.top = `calc(${yPct}% - 32px)`;
+			div.innerHTML = `<span class="currents-event-arrow" style="display:block; font-size:0.7rem; color:#94a3b8; font-weight:bold; text-align: center; letter-spacing: 0.5px;">◇ SLACK</span><span class="currents-event-time" style="display:block; font-size:0.6rem; color:#64748b; text-align: center; margin-top: 2px;">${timeStr}</span>`;
 		}
 
 		elements.currentsEventsWrapper.appendChild(div);

@@ -35,7 +35,6 @@ const elements: Elements = {
 	currentTideUnit: document.getElementById("current-tide-unit"),
 	currentTideSlope: document.getElementById("current-tide-slope"),
 	currentStatusVal: document.getElementById("current-status-val"),
-	forecastList: document.getElementById("forecast-list"),
 	weatherTimelineBar: document.getElementById("weather-timeline-bar"),
 	tidelogContent: document.getElementById("tidelog-content"),
 
@@ -114,7 +113,15 @@ const elements: Elements = {
 // --- Initialization ---
 
 window.addEventListener("DOMContentLoaded", () => {
-	startAutoTransitionTimer();
+	const urlParams = new URLSearchParams(window.location.search);
+	const isKiosk = urlParams.get("kiosk") === "true";
+
+	if (isKiosk) {
+		document.body.classList.add("kiosk-mode");
+		startAutoTransitionTimer();
+	}
+
+	setupNavigationHandlers();
 	loadData();
 	setInterval(updateClock, 1000);
 	setInterval(loadData, 10 * 60 * 1000);
@@ -146,40 +153,58 @@ function crossfadeUpdate(
 	}, half);
 }
 
+function switchDay(nextOffset: number): void {
+	if (state.selectedDayOffset === nextOffset) return;
+	const timeline = elements.scrollableTimeline;
+
+	// Update viewed offset
+	state.selectedDayOffset = nextOffset;
+
+	// Slide the timeline container horizontally
+	if (timeline) {
+		if (nextOffset === 0) {
+			timeline.style.transform = "translateX(0%)";
+		} else {
+			timeline.style.transform = "translateX(-50%)";
+		}
+	}
+
+	// Update badges active class
+	if (elements.badgeToday && elements.badgeTomorrow) {
+		if (nextOffset === 0) {
+			elements.badgeToday.classList.add("active");
+			elements.badgeTomorrow.classList.remove("active");
+		} else {
+			elements.badgeTomorrow.classList.add("active");
+			elements.badgeToday.classList.remove("active");
+		}
+	}
+
+	// Crossfade the date header in step with the slide
+	crossfadeUpdate(elements.digitalDate, updateDateHeader, DAY_TRANSITION_MS);
+
+	// Update astro details
+	updateAstronomicalDetails(state, elements);
+}
+
+function setupNavigationHandlers(): void {
+	if (elements.badgeToday) {
+		elements.badgeToday.addEventListener("click", () => {
+			switchDay(0);
+		});
+	}
+	if (elements.badgeTomorrow) {
+		elements.badgeTomorrow.addEventListener("click", () => {
+			switchDay(1);
+		});
+	}
+}
+
 function startAutoTransitionTimer(): void {
 	setInterval(() => {
 		const currentOffset = state.selectedDayOffset;
 		const nextOffset = currentOffset === 0 ? 1 : 0;
-		const timeline = elements.scrollableTimeline;
-
-		// Update viewed offset
-		state.selectedDayOffset = nextOffset;
-
-		// Slide the timeline container horizontally
-		if (timeline) {
-			if (nextOffset === 0) {
-				timeline.style.transform = "translateX(0%)";
-			} else {
-				timeline.style.transform = "translateX(-50%)";
-			}
-		}
-
-		// Update badges active class
-		if (elements.badgeToday && elements.badgeTomorrow) {
-			if (nextOffset === 0) {
-				elements.badgeToday.classList.add("active");
-				elements.badgeTomorrow.classList.remove("active");
-			} else {
-				elements.badgeTomorrow.classList.add("active");
-				elements.badgeToday.classList.remove("active");
-			}
-		}
-
-		// Crossfade the date header in step with the slide
-		crossfadeUpdate(elements.digitalDate, updateDateHeader, DAY_TRANSITION_MS);
-
-		// Update astro details
-		updateAstronomicalDetails(state, elements);
+		switchDay(nextOffset);
 	}, DAY_HOLD_MS);
 }
 

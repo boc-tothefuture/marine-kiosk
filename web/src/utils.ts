@@ -73,6 +73,38 @@ export function getTargetDayRange(state: State): [number, number] {
 	];
 }
 
+// The main tidelog <svg> uses viewBox="0 0 2000 400" with preserveAspectRatio="none"
+// so it can stretch to fill whatever box the layout gives it. That stretch is
+// virtually never uniform (the rendered box's aspect ratio rarely matches 5:1),
+// so anything meant to look geometrically round on screen (arcs, circles) needs
+// its vertical radius inflated by this ratio in viewBox-space to compensate.
+// Text and straight lines don't need this - they're rendered as HTML overlays
+// or don't have a "correct" shape to preserve.
+export function getSvgAspectCorrection(
+	svg: SVGSVGElement | null | undefined,
+): number {
+	if (!svg) return 1;
+	const vb = svg.viewBox.baseVal;
+	const rect = svg.getBoundingClientRect();
+	if (!vb || vb.width === 0 || vb.height === 0 || rect.height === 0) return 1;
+	const scaleX = rect.width / vb.width;
+	const scaleY = rect.height / vb.height;
+	if (scaleY === 0) return 1;
+	return scaleX / scaleY;
+}
+
+// Vertical-only scale factor (viewBox y-units -> rendered CSS px). Used to
+// convert a desired on-screen pixel offset (e.g. "start this line N px below
+// the label sitting above it") into the matching y-coordinate in the SVG's
+// own 0-400 coordinate space.
+export function getSvgScaleY(svg: SVGSVGElement | null | undefined): number {
+	if (!svg) return 1;
+	const vb = svg.viewBox.baseVal;
+	const rect = svg.getBoundingClientRect();
+	if (!vb || vb.height === 0 || rect.height === 0) return 1;
+	return rect.height / vb.height;
+}
+
 export function createSvgElement(
 	tag: string,
 	attributes: Record<string, string | number>,
@@ -101,12 +133,14 @@ export function setSvgElementX(
 	element: SVGElement | null | undefined,
 	xValue: number,
 	isLine = false,
+	y1Value?: number,
 ): void {
 	if (!element) return;
 	const fixedX = xValue.toFixed(1);
 	if (isLine) {
 		element.setAttribute("x1", fixedX);
 		element.setAttribute("x2", fixedX);
+		if (y1Value !== undefined) element.setAttribute("y1", y1Value.toFixed(1));
 	} else {
 		element.setAttribute("x", fixedX);
 	}

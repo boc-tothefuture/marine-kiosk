@@ -60,7 +60,6 @@ export interface Elements {
 	currentTideUnit: HTMLElement | null;
 	currentTideSlope: HTMLElement | null;
 	currentStatusVal: HTMLElement | null;
-	forecastList: HTMLElement | null;
 	weatherTimelineBar: HTMLElement | null;
 
 	badgeToday: HTMLElement | null;
