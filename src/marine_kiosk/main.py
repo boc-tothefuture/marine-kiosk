@@ -45,14 +45,17 @@ def load_config(config_path=None):
 
 def scraper_worker(station_id, units, datum, interval_hours, config_path=None):
     print(f"Scraper Worker: Starting scraper thread (updates every {interval_hours} hour(s)).")
+    retry_delay_sec = 60
+    max_retry_delay_sec = 300
     while True:
         try:
             fetch_tide_data(station_id, units, datum, config_path=config_path)
+            retry_delay_sec = 60
+            time.sleep(interval_hours * 3600)
         except Exception as e:
-            print(f"Scraper Worker Error: Scraper failed to fetch data: {e}")
-        
-        # Sleep until the next update
-        time.sleep(interval_hours * 3600)
+            print(f"Scraper Worker Error: Scraper failed to fetch data: {e}. Retrying in {retry_delay_sec}s...")
+            time.sleep(retry_delay_sec)
+            retry_delay_sec = min(retry_delay_sec * 2, max_retry_delay_sec)
 
 def main():
     parser = argparse.ArgumentParser(description="Marine Kiosk Daemon Service")

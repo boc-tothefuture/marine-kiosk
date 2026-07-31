@@ -60,19 +60,11 @@ export interface Elements {
 	currentTideUnit: HTMLElement | null;
 	currentTideSlope: HTMLElement | null;
 	currentStatusVal: HTMLElement | null;
-	extremesList: HTMLElement | null;
 	forecastList: HTMLElement | null;
 	weatherTimelineBar: HTMLElement | null;
 
 	badgeToday: HTMLElement | null;
 	badgeTomorrow: HTMLElement | null;
-
-	sunRiseTime: HTMLElement | null;
-	sunSetTime: HTMLElement | null;
-	daylightDuration: HTMLElement | null;
-	moonRiseTime: HTMLElement | null;
-	moonSetTime: HTMLElement | null;
-	moonPhaseName: HTMLElement | null;
 
 	metaStationId: HTMLElement | null;
 	metaCurrentsStationId: HTMLElement | null;
@@ -92,33 +84,17 @@ export interface Elements {
 
 	sunriseLine: SVGLineElement | null;
 	sunsetLine: SVGLineElement | null;
-	sunriseTextLabel: SVGTextElement | null;
-	sunriseTimeLabel: SVGTextElement | null;
-	sunsetTextLabel: SVGTextElement | null;
-	sunsetTimeLabel: SVGTextElement | null;
-
 	sunriseLine2: SVGLineElement | null;
 	sunsetLine2: SVGLineElement | null;
-	sunriseTextLabel2: SVGTextElement | null;
-	sunriseTimeLabel2: SVGTextElement | null;
-	sunsetTextLabel2: SVGTextElement | null;
-	sunsetTimeLabel2: SVGTextElement | null;
 
 	moonriseLine: SVGLineElement | null;
 	moonsetLine: SVGLineElement | null;
-	moonriseTextLabel: SVGTextElement | null;
-	moonriseTimeLabel: SVGTextElement | null;
-	moonsetTextLabel: SVGTextElement | null;
-	moonsetTimeLabel: SVGTextElement | null;
-
 	moonriseLine2: SVGLineElement | null;
 	moonsetLine2: SVGLineElement | null;
-	moonriseTextLabel2: SVGTextElement | null;
-	moonriseTimeLabel2: SVGTextElement | null;
-	moonsetTextLabel2: SVGTextElement | null;
-	moonsetTimeLabel2: SVGTextElement | null;
 
 	tideOverlayLabels: HTMLElement | null;
+	astroOverlayLabels: HTMLElement | null;
+	gridOverlayLabels: HTMLElement | null;
 	currentsEventsWrapper: HTMLElement | null;
 	tidelogContent: HTMLElement | null;
 	scrollableTimeline: HTMLElement | null;

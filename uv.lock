@@ -286,6 +286,7 @@ dependencies = [
     { name = "astral" },
     { name = "noaa-coops" },
     { name = "pandas" },
+    { name = "requests" },
 ]
 
 [package.metadata]
@@ -293,6 +294,7 @@ requires-dist = [
     { name = "astral", specifier = ">=3.2" },
     { name = "noaa-coops", specifier = ">=0.3.1" },
     { name = "pandas", specifier = ">=2.0.0" },
+    { name = "requests", specifier = ">=2.31.0" },
 ]
 
 [[package]]

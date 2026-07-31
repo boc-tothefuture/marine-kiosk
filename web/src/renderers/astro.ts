@@ -1,9 +1,5 @@
 import type { AstronomicalDay, Elements, State } from "../types";
-import {
-	formatIsoTime,
-	setLabelPositionAndText,
-	setSvgElementX,
-} from "../utils";
+import { formatIsoTime, setSvgElementX } from "../utils";
 
 export function getAstronomicalDataForDayOffset(
 	state: State,
@@ -28,26 +24,6 @@ export function updateAstronomicalDetails(
 	const dayAstro = getAstronomicalDataForSelectedDay(state);
 	if (!dayAstro) return;
 
-	if (elements.sunRiseTime)
-		elements.sunRiseTime.textContent = formatIsoTime(dayAstro.sunrise);
-	if (elements.sunSetTime)
-		elements.sunSetTime.textContent = formatIsoTime(dayAstro.sunset);
-
-	if (dayAstro.sunrise && dayAstro.sunset && elements.daylightDuration) {
-		const diffMs =
-			new Date(dayAstro.sunset).getTime() -
-			new Date(dayAstro.sunrise).getTime();
-		elements.daylightDuration.textContent = `${Math.floor(diffMs / (3600 * 1000))}h ${Math.round((diffMs % (3600 * 1000)) / (60 * 1000))}m`;
-	} else if (elements.daylightDuration) {
-		elements.daylightDuration.textContent = "--";
-	}
-
-	if (elements.moonRiseTime)
-		elements.moonRiseTime.textContent = formatIsoTime(dayAstro.moonrise);
-	if (elements.moonSetTime)
-		elements.moonSetTime.textContent = formatIsoTime(dayAstro.moonset);
-	if (elements.moonPhaseName)
-		elements.moonPhaseName.textContent = dayAstro.moon_phase_name.toUpperCase();
 	if (elements.moonIndicatorIcon)
 		elements.moonIndicatorIcon.textContent = dayAstro.moon_phase_symbol;
 }
@@ -58,10 +34,6 @@ export function hideSunElements(elements: Elements): void {
 		"sunStrokePath",
 		"sunriseLine",
 		"sunsetLine",
-		"sunriseTextLabel",
-		"sunriseTimeLabel",
-		"sunsetTextLabel",
-		"sunsetTimeLabel",
 	];
 	for (const key of sunKeys) {
 		const el = elements[key] as HTMLElement | SVGElement | null;
@@ -73,10 +45,6 @@ export function hideSun2Elements(elements: Elements): void {
 	const sunKeys: (keyof Elements)[] = [
 		"sunriseLine2",
 		"sunsetLine2",
-		"sunriseTextLabel2",
-		"sunriseTimeLabel2",
-		"sunsetTextLabel2",
-		"sunsetTimeLabel2",
 	];
 	for (const key of sunKeys) {
 		const el = elements[key] as HTMLElement | SVGElement | null;
@@ -148,18 +116,6 @@ export function renderSunBackground(
 	if (day1Astro) {
 		setSvgElementX(elements.sunriseLine, xRise1, true);
 		setSvgElementX(elements.sunsetLine, xSet1, true);
-		setLabelPositionAndText(
-			elements.sunriseTimeLabel,
-			xRise1,
-			formatIsoTime(day1Astro.sunrise),
-		);
-		setLabelPositionAndText(
-			elements.sunsetTimeLabel,
-			xSet1,
-			formatIsoTime(day1Astro.sunset),
-		);
-		setLabelPositionAndText(elements.sunriseTextLabel, xRise1);
-		setLabelPositionAndText(elements.sunsetTextLabel, xSet1);
 	} else {
 		hideSunElements(elements);
 	}
@@ -167,18 +123,6 @@ export function renderSunBackground(
 	if (day2Astro) {
 		setSvgElementX(elements.sunriseLine2, xRise2, true);
 		setSvgElementX(elements.sunsetLine2, xSet2, true);
-		setLabelPositionAndText(
-			elements.sunriseTimeLabel2,
-			xRise2,
-			formatIsoTime(day2Astro.sunrise),
-		);
-		setLabelPositionAndText(
-			elements.sunsetTimeLabel2,
-			xSet2,
-			formatIsoTime(day2Astro.sunset),
-		);
-		setLabelPositionAndText(elements.sunriseTextLabel2, xRise2);
-		setLabelPositionAndText(elements.sunsetTextLabel2, xSet2);
 	} else {
 		hideSun2Elements(elements);
 	}
@@ -190,46 +134,25 @@ export function updateLunarMarkersDOM(
 	moonsetMs: number | null,
 	startMs: number,
 	duration: number,
-	dayAstro: AstronomicalDay,
 	isDay2 = false,
 ): void {
 	const lineRise = isDay2 ? elements.moonriseLine2 : elements.moonriseLine;
-	const textRise = isDay2
-		? elements.moonriseTextLabel2
-		: elements.moonriseTextLabel;
-	const timeRise = isDay2
-		? elements.moonriseTimeLabel2
-		: elements.moonriseTimeLabel;
-
 	const lineSet = isDay2 ? elements.moonsetLine2 : elements.moonsetLine;
-	const textSet = isDay2
-		? elements.moonsetTextLabel2
-		: elements.moonsetTextLabel;
-	const timeSet = isDay2
-		? elements.moonsetTimeLabel2
-		: elements.moonsetTimeLabel;
 
 	const updateMarker = (
 		ms: number | null,
 		lineEl: SVGLineElement | null,
-		textEl: SVGTextElement | null,
-		timeEl: SVGTextElement | null,
-		timeStr: string | null,
 	) => {
 		if (ms && ms >= startMs && ms <= startMs + duration) {
 			const x = ((ms - startMs) / duration) * 2000;
 			setSvgElementX(lineEl, x, true);
-			setLabelPositionAndText(timeEl, x, formatIsoTime(timeStr));
-			setLabelPositionAndText(textEl, x);
 		} else {
-			for (const el of [lineEl, textEl, timeEl]) {
-				if (el) el.style.display = "none";
-			}
+			if (lineEl) lineEl.style.display = "none";
 		}
 	};
 
-	updateMarker(moonriseMs, lineRise, textRise, timeRise, dayAstro.moonrise);
-	updateMarker(moonsetMs, lineSet, textSet, timeSet, dayAstro.moonset);
+	updateMarker(moonriseMs, lineRise);
+	updateMarker(moonsetMs, lineSet);
 }
 
 export function hideLunarElements(elements: Elements): void {
@@ -239,11 +162,7 @@ export function hideLunarElements(elements: Elements): void {
 		elements.moonIndicatorGroup.style.display = "none";
 	const moonKeys: (keyof Elements)[] = [
 		"moonriseLine",
-		"moonriseTextLabel",
-		"moonriseTimeLabel",
 		"moonsetLine",
-		"moonsetTextLabel",
-		"moonsetTimeLabel",
 	];
 	for (const key of moonKeys) {
 		const el = elements[key] as HTMLElement | SVGElement | null;
@@ -254,11 +173,7 @@ export function hideLunarElements(elements: Elements): void {
 export function hideLunar2Elements(elements: Elements): void {
 	const moonKeys: (keyof Elements)[] = [
 		"moonriseLine2",
-		"moonriseTextLabel2",
-		"moonriseTimeLabel2",
 		"moonsetLine2",
-		"moonsetTextLabel2",
-		"moonsetTimeLabel2",
 	];
 	for (const key of moonKeys) {
 		const el = elements[key] as HTMLElement | SVGElement | null;
@@ -352,8 +267,18 @@ export function renderLunarTransit(
 
 	let path1D = "";
 	let path2D = "";
-	let lunarData1 = { showMoon: false, mx: 0, my: 0 };
-	let lunarData2 = { showMoon: false, mx: 0, my: 0 };
+	let lunarData1: { pathD: string; showMoon: boolean; mx: number; my: number } = {
+		pathD: "",
+		showMoon: false,
+		mx: 0,
+		my: 0,
+	};
+	let lunarData2: { pathD: string; showMoon: boolean; mx: number; my: number } = {
+		pathD: "",
+		showMoon: false,
+		mx: 0,
+		my: 0,
+	};
 
 	const nowMs = Date.now();
 
@@ -378,7 +303,6 @@ export function renderLunarTransit(
 			moonsetMs1,
 			startMs,
 			duration,
-			day1Astro,
 			false,
 		);
 	} else {
@@ -406,7 +330,6 @@ export function renderLunarTransit(
 			moonsetMs2,
 			startMs,
 			duration,
-			day2Astro,
 			true,
 		);
 	} else {
@@ -445,5 +368,58 @@ export function renderLunarTransit(
 		} else {
 			elements.moonIndicatorGroup.style.display = "none";
 		}
+	}
+
+	renderAstroOverlayLabels(elements, startMs, duration, state);
+}
+
+export function renderAstroOverlayLabels(
+	elements: Elements,
+	startMs: number,
+	duration: number,
+	state: State,
+): void {
+	const overlay = elements.astroOverlayLabels;
+	if (!overlay) return;
+	overlay.innerHTML = "";
+
+	const addCallout = (
+		timeIso: string | null,
+		title: string,
+		type: "sun" | "moon",
+		topPx: number,
+	) => {
+		if (!timeIso) return;
+		const ms = new Date(timeIso).getTime();
+		if (ms < startMs || ms > startMs + duration) return;
+		const timeStr = formatIsoTime(timeIso);
+		if (!timeStr) return;
+		const xPct = ((ms - startMs) / duration) * 100;
+
+		const div = document.createElement("div");
+		div.className = `astro-callout ${type}`;
+		div.style.left = `${xPct}%`;
+		div.style.top = `${topPx}px`;
+		div.innerHTML = `
+			<div class="astro-title">${title}</div>
+			<div class="astro-time">${timeStr}</div>
+		`;
+		overlay.appendChild(div);
+	};
+
+	const day1Astro = getAstronomicalDataForDayOffset(state, 0);
+	const day2Astro = getAstronomicalDataForDayOffset(state, 1);
+
+	if (day1Astro) {
+		addCallout(day1Astro.sunrise, "Sunrise", "sun", 8);
+		addCallout(day1Astro.sunset, "Sunset", "sun", 8);
+		addCallout(day1Astro.moonrise, "Moonrise", "moon", 34);
+		addCallout(day1Astro.moonset, "Moonset", "moon", 34);
+	}
+	if (day2Astro) {
+		addCallout(day2Astro.sunrise, "Sunrise", "sun", 8);
+		addCallout(day2Astro.sunset, "Sunset", "sun", 8);
+		addCallout(day2Astro.moonrise, "Moonrise", "moon", 34);
+		addCallout(day2Astro.moonset, "Moonset", "moon", 34);
 	}
 }

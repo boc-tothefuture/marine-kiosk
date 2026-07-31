@@ -61,21 +61,7 @@ html, body {
 	gap: 2px;
 }
 
-.back-btn {
-	color: var(--accent-color);
-	text-decoration: none;
-	font-size: 0.9rem;
-	font-weight: 500;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	margin-bottom: 4px;
-	transition: opacity 0.2s ease;
-}
 
-.back-btn:hover {
-	opacity: 0.8;
-}
 
 #station-name {
 	font-size: 1.6rem;
@@ -278,10 +264,10 @@ html, body {
 	background: rgba(15, 23, 42, 0.25);
 	border: 1px solid var(--border-color);
 	border-radius: 16px;
-	padding: 40px 24px 24px 24px;
+	padding: clamp(36px, 4.5vh, 56px) 20px 16px 20px;
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: clamp(8px, 1.2vh, 16px);
 	box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 	overflow: hidden;
 }
@@ -290,14 +276,14 @@ html, body {
 	width: 200%;
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: clamp(8px, 1.2vh, 16px);
 	transition: transform 2s cubic-bezier(0.25, 1, 0.5, 1);
 	transform: translateX(0);
 }
 
 #tidelog-svg {
 	width: 100%;
-	height: 55vh;
+	height: clamp(260px, 44vh, 480px);
 	overflow: visible;
 	position: relative;
 }
@@ -313,17 +299,21 @@ html, body {
 	stroke-width: 1.2;
 }
 
-.grid-time-label {
-	fill: var(--text-muted);
+.grid-time-label-html {
+	position: absolute;
+	bottom: 6px;
+	transform: translateX(-50%);
 	font-family: "Outfit", sans-serif;
-	font-size: 10px;
+	font-size: 0.7rem;
 	font-weight: 400;
-	text-anchor: middle;
+	color: var(--text-muted);
 	opacity: 0.5;
+	white-space: nowrap;
+	pointer-events: none;
 }
 
-.grid-time-label.major {
-	fill: var(--accent-color);
+.grid-time-label-html.major {
+	color: var(--accent-color);
 	font-weight: 600;
 	opacity: 0.85;
 }
@@ -336,7 +326,57 @@ html, body {
 .tidelog-svg-wrapper {
 	position: relative;
 	width: 100%;
-	height: 55vh;
+	height: clamp(260px, 44vh, 480px);
+}
+
+#astro-overlay-labels,
+#grid-overlay-labels {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.astro-callout {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	white-space: nowrap;
+	pointer-events: none;
+	transform: translateX(-50%);
+}
+
+.astro-callout.sun .astro-title {
+	color: #fbbf24;
+	font-size: 0.65rem;
+	font-weight: 400;
+	opacity: 0.7;
+}
+
+.astro-callout.sun .astro-time {
+	color: #fbbf24;
+	font-size: 0.75rem;
+	font-weight: 600;
+	opacity: 0.85;
+}
+
+.astro-callout.moon .astro-title {
+	color: #64748b;
+	font-size: 0.65rem;
+	font-weight: 400;
+	opacity: 0.7;
+}
+
+.astro-callout.moon .astro-time {
+	color: #64748b;
+	font-size: 0.75rem;
+	font-weight: 600;
+	opacity: 0.85;
 }
 
 /* NOW Marker Overlay Elements */

@@ -295,7 +295,8 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
 
     marine_forecast = []
     try:
-        nws_headers = {"User-Agent": "(marine-kiosk-dashboard, brian@example.com)"}
+        nws_contact = cfg.get("nws_user_agent_email", "broconne@gmail.com")
+        nws_headers = {"User-Agent": f"(marine-kiosk-dashboard, {nws_contact})"}
         
         # 1. Fetch latest CWF products from the office
         url_list = f"https://api.weather.gov/products/types/CWF/locations/{nws_office}"
@@ -440,7 +441,9 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
         "last_updated": now.isoformat()
     }
 
-    with open(output_path, "w") as f:
+    tmp_path = output_path + ".tmp"
+    with open(tmp_path, "w") as f:
         json.dump(output_data, f, indent=2)
+    os.replace(tmp_path, output_path)
 
     print(f"Scraper: Successfully saved tide data to {output_path}")

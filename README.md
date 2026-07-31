@@ -68,15 +68,7 @@ You can customize the NOAA station, server port, and update frequency in **`tide
 
 ---
 
-## Screen Settings & Themes
 
-You can interact with the dashboard directly from your web browser:
-*   Open the settings panel by pressing the **`S` key** on your keyboard or clicking the gear icon in the top right.
-*   **Color Theme**: Choose between *Ocean Cyan*, *Cyberpunk Pink*, *Mono White*, and *Retro Amber*.
-*   **Vertical Scaling**: Toggle between *Dynamic* (expands wave to fill screen vertical space) and *Fixed* (maps heights statically between -2.0 ft and +12.0 ft).
-*   **Data Source**: Toggle between *Live NOAA Data* (reads real-time file outputs) and *Simulated Offline Demo* (draws mathematical wave approximations, useful for offline testing).
-
----
 
 ## Running on Boot (Raspberry Pi / Linux Server)
 

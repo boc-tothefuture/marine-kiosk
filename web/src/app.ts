@@ -6,7 +6,6 @@ import {
 	get48HourRange,
 	getCurrentSpeedAtTime,
 	getSvgYCoordinate,
-	getTargetDayRange,
 	getTideHeightAtTime,
 } from "./utils";
 
@@ -36,20 +35,12 @@ const elements: Elements = {
 	currentTideUnit: document.getElementById("current-tide-unit"),
 	currentTideSlope: document.getElementById("current-tide-slope"),
 	currentStatusVal: document.getElementById("current-status-val"),
-	extremesList: document.getElementById("extremes-list"),
 	forecastList: document.getElementById("forecast-list"),
 	weatherTimelineBar: document.getElementById("weather-timeline-bar"),
 	tidelogContent: document.getElementById("tidelog-content"),
 
 	badgeToday: document.getElementById("badge-today"),
 	badgeTomorrow: document.getElementById("badge-tomorrow"),
-
-	sunRiseTime: document.getElementById("sun-rise-time"),
-	sunSetTime: document.getElementById("sun-set-time"),
-	daylightDuration: document.getElementById("daylight-duration"),
-	moonRiseTime: document.getElementById("moon-rise-time"),
-	moonSetTime: document.getElementById("moon-set-time"),
-	moonPhaseName: document.getElementById("moon-phase-name"),
 
 	metaStationId: document.getElementById("meta-station-id"),
 	metaCurrentsStationId: document.getElementById("meta-currents-station-id"),
@@ -85,75 +76,27 @@ const elements: Elements = {
 
 	sunriseLine: document.getElementById("sunrise-line") as SVGLineElement | null,
 	sunsetLine: document.getElementById("sunset-line") as SVGLineElement | null,
-	sunriseTextLabel: document.getElementById(
-		"sunrise-text-label",
-	) as SVGTextElement | null,
-	sunriseTimeLabel: document.getElementById(
-		"sunrise-time-label",
-	) as SVGTextElement | null,
-	sunsetTextLabel: document.getElementById(
-		"sunset-text-label",
-	) as SVGTextElement | null,
-	sunsetTimeLabel: document.getElementById(
-		"sunset-time-label",
-	) as SVGTextElement | null,
-
 	sunriseLine2: document.getElementById(
 		"sunrise-line-2",
 	) as SVGLineElement | null,
 	sunsetLine2: document.getElementById(
 		"sunset-line-2",
 	) as SVGLineElement | null,
-	sunriseTextLabel2: document.getElementById(
-		"sunrise-text-label-2",
-	) as SVGTextElement | null,
-	sunriseTimeLabel2: document.getElementById(
-		"sunrise-time-label-2",
-	) as SVGTextElement | null,
-	sunsetTextLabel2: document.getElementById(
-		"sunset-text-label-2",
-	) as SVGTextElement | null,
-	sunsetTimeLabel2: document.getElementById(
-		"sunset-time-label-2",
-	) as SVGTextElement | null,
 
 	moonriseLine: document.getElementById(
 		"moonrise-line",
 	) as SVGLineElement | null,
 	moonsetLine: document.getElementById("moonset-line") as SVGLineElement | null,
-	moonriseTextLabel: document.getElementById(
-		"moonrise-text-label",
-	) as SVGTextElement | null,
-	moonriseTimeLabel: document.getElementById(
-		"moonrise-time-label",
-	) as SVGTextElement | null,
-	moonsetTextLabel: document.getElementById(
-		"moonset-text-label",
-	) as SVGTextElement | null,
-	moonsetTimeLabel: document.getElementById(
-		"moonset-time-label",
-	) as SVGTextElement | null,
-
 	moonriseLine2: document.getElementById(
 		"moonrise-line-2",
 	) as SVGLineElement | null,
 	moonsetLine2: document.getElementById(
 		"moonset-line-2",
 	) as SVGLineElement | null,
-	moonriseTextLabel2: document.getElementById(
-		"moonrise-text-label-2",
-	) as SVGTextElement | null,
-	moonriseTimeLabel2: document.getElementById(
-		"moonrise-time-label-2",
-	) as SVGTextElement | null,
-	moonsetTextLabel2: document.getElementById(
-		"moonset-text-label-2",
-	) as SVGTextElement | null,
-	moonsetTimeLabel2: document.getElementById(
-		"moonset-time-label-2",
-	) as SVGTextElement | null,
 
 	tideOverlayLabels: document.getElementById("tide-overlay-labels"),
+	astroOverlayLabels: document.getElementById("astro-overlay-labels"),
+	gridOverlayLabels: document.getElementById("grid-overlay-labels"),
 	currentsEventsWrapper: document.getElementById("currents-events-wrapper"),
 	scrollableTimeline: document.getElementById("scrollable-timeline"),
 
@@ -232,10 +175,8 @@ function startAutoTransitionTimer(): void {
 			}
 		}
 
-		// Crossfade the date header and extremes list in step with the slide,
-		// instead of snapping their content instantly.
+		// Crossfade the date header in step with the slide
 		crossfadeUpdate(elements.digitalDate, updateDateHeader, DAY_TRANSITION_MS);
-		crossfadeUpdate(elements.extremesList, renderExtremes, DAY_TRANSITION_MS);
 
 		// Update astro details
 		updateAstronomicalDetails(state, elements);
@@ -306,7 +247,6 @@ function updateUI(): void {
 	}
 
 	drawTidelogGrid(elements);
-	renderExtremes();
 	renderForecast(state, elements);
 	updateAstronomicalDetails(state, elements);
 	renderTidelogGraph(state, elements);
@@ -342,41 +282,6 @@ function updateDateHeader(): void {
 	elements.digitalDate.textContent = displayDate
 		.toLocaleDateString("en-US", options)
 		.toUpperCase();
-}
-
-function renderExtremes(): void {
-	const extremesList = elements.extremesList;
-	if (!extremesList) return;
-	extremesList.innerHTML = "";
-	const [startMs, endMs] = getTargetDayRange(state);
-
-	const dayExtremes = state.tideExtremes.filter(
-		(pt) => pt.timeMs >= startMs && pt.timeMs <= endMs,
-	);
-
-	if (dayExtremes.length === 0) {
-		extremesList.innerHTML =
-			'<div class="data-item placeholder">No extremes today</div>';
-		return;
-	}
-
-	for (const pt of dayExtremes) {
-		const timeStr = new Date(pt.timeMs).toLocaleTimeString([], {
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-		const isHigh = pt.type === "H";
-
-		const row = document.createElement("div");
-		row.className = "data-item";
-		row.innerHTML = `
-			<span class="data-item-label">${isHigh ? "High" : "Low"} (${timeStr})</span>
-			<span class="data-item-val" style="color: ${isHigh ? "var(--accent-color)" : "var(--text-color)"}">
-				${isHigh ? "+" : ""}${pt.value.toFixed(1)} ${state.units === "english" ? "FT" : "M"}
-			</span>
-		`;
-		extremesList.appendChild(row);
-	}
 }
 
 function updateNowTracker(now: Date): void {

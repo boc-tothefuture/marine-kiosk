@@ -11,6 +11,9 @@ import { renderCurrentsTimeline } from "./currents";
 export function drawTidelogGrid(elements: Elements): void {
 	if (!elements.tidelogGridLines) return;
 	elements.tidelogGridLines.innerHTML = "";
+	if (elements.gridOverlayLabels) {
+		elements.gridOverlayLabels.innerHTML = "";
+	}
 
 	for (let h = 0; h <= 48; h += 2) {
 		const x = (h / 48) * 2000;
@@ -23,31 +26,28 @@ export function drawTidelogGrid(elements: Elements): void {
 			y2: 400,
 			class: isMajor ? "tidelog-grid-line major" : "tidelog-grid-line",
 		});
-
-		const displayHour = h % 24;
-		let label = "";
-		if (displayHour === 0) {
-			label = "12 AM";
-		} else if (displayHour === 12) {
-			label = "NOON";
-		} else if (displayHour < 12) {
-			label = `${displayHour} AM`;
-		} else {
-			label = `${displayHour - 12} PM`;
-		}
-
-		const txt = createSvgElement(
-			"text",
-			{
-				x: x,
-				y: 385,
-				class: isMajor ? "grid-time-label major" : "grid-time-label",
-			},
-			label,
-		);
-
 		elements.tidelogGridLines.appendChild(line);
-		elements.tidelogGridLines.appendChild(txt);
+
+		if (elements.gridOverlayLabels) {
+			const displayHour = h % 24;
+			let label = "";
+			if (displayHour === 0) {
+				label = "12 AM";
+			} else if (displayHour === 12) {
+				label = "NOON";
+			} else if (displayHour < 12) {
+				label = `${displayHour} AM`;
+			} else {
+				label = `${displayHour - 12} PM`;
+			}
+
+			const xPct = (h / 48) * 100;
+			const div = document.createElement("div");
+			div.className = `grid-time-label-html ${isMajor ? "major" : ""}`;
+			div.style.left = `${xPct}%`;
+			div.textContent = label;
+			elements.gridOverlayLabels.appendChild(div);
+		}
 	}
 }
 

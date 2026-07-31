@@ -6,6 +6,7 @@
     "build": "esbuild src/app.ts --bundle --outfile=app.js --minify --sourcemap",
     "watch": "esbuild src/app.ts --bundle --outfile=app.js --watch --sourcemap",
     "lint": "biome check src/",
+    "typecheck": "tsc --noEmit",
     "format": "biome format --write src/"
   },
   "devDependencies": {

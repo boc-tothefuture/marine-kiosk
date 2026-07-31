@@ -1,5 +1,4 @@
 import http.server
-import socketserver
 import os
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -12,8 +11,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=web_dir, **kwargs)
 
 def start_server(port):
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", port), Handler) as httpd:
+    http.server.ThreadingHTTPServer.allow_reuse_address = True
+    with http.server.ThreadingHTTPServer(("", port), Handler) as httpd:
         print(f"Server: Serving Tide Clock dashboard at http://localhost:{port}")
         print("Server: Press Ctrl+C to stop the service.")
         try:

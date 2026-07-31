@@ -22,7 +22,7 @@ export function interpolateValueAtTime(
 	}
 
 	if (!lower && !upper) return 0.0;
-	if (!lower) return upper?.value;
+	if (!lower) return (upper as TidePoint | CurrentPoint).value;
 	if (!upper) return lower.value;
 	if (lower.timeMs === upper.timeMs) return lower.value;
 
