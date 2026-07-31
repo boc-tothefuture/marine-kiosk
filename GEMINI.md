@@ -7,4 +7,6 @@
 - **Commit & Push Workflow**:
   1. Make local code edits and bump version.
   2. Set commit message using `jj describe -m "<commit message>"`.
-  3. Push changes using `jj git push`.
+  3. Move bookmark if needed and push changes using `jj bookmark set main -r @` and `jj git push`.
+  4. Create a new clean working copy using `jj new`.
+
