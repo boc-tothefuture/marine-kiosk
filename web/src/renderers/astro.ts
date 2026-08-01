@@ -25,17 +25,12 @@ export function getAstronomicalDataForDayOffset(
 	return state.astronomical_data ? state.astronomical_data[dateKey] : null;
 }
 
-export function getAstronomicalDataForSelectedDay(
-	state: State,
-): AstronomicalDay | null {
-	return getAstronomicalDataForDayOffset(state, state.selectedDayOffset);
-}
-
 export function updateAstronomicalDetails(
 	state: State,
 	elements: Elements,
+	dayOffset: number,
 ): void {
-	const dayAstro = getAstronomicalDataForSelectedDay(state);
+	const dayAstro = getAstronomicalDataForDayOffset(state, dayOffset);
 	if (!dayAstro) return;
 
 	if (elements.moonIndicatorIcon)

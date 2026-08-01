@@ -48,31 +48,6 @@ export function getSvgYCoordinate(height: number): number {
 	return 340 - ((height - -2.0) / (12.0 - -2.0)) * 260;
 }
 
-export function getTargetDayRange(state: State): [number, number] {
-	const base = new Date();
-	base.setDate(base.getDate() + state.selectedDayOffset);
-	return [
-		new Date(
-			base.getFullYear(),
-			base.getMonth(),
-			base.getDate(),
-			0,
-			0,
-			0,
-			0,
-		).getTime(),
-		new Date(
-			base.getFullYear(),
-			base.getMonth(),
-			base.getDate(),
-			23,
-			59,
-			59,
-			999,
-		).getTime(),
-	];
-}
-
 // The main tidelog <svg> uses viewBox="0 0 2000 400" with preserveAspectRatio="none"
 // so it can stretch to fill whatever box the layout gives it. That stretch is
 // virtually never uniform (the rendered box's aspect ratio rarely matches 5:1),

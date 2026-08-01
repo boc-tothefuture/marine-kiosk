@@ -47,7 +47,12 @@ export interface State {
 	waterTemp: number | null;
 	marineForecast: MarinePeriod[];
 	connectionOnline: boolean;
-	selectedDayOffset: number;
+	// Hours (0-24) into the 48h graph where the visible viewport currently
+	// starts. 0 = viewport shows today (hours 0-24), 24 = viewport shows
+	// tomorrow (hours 24-48). Values in between are mid-scroll, spanning
+	// midnight - see viewportDayOffset() in app.ts for how that's resolved
+	// to a single calendar day for header/astro purposes.
+	viewOffsetHours: number;
 	astronomical_data?: Record<string, AstronomicalDay>;
 	lastUpdated?: string;
 }

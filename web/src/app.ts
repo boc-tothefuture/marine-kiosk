@@ -24,7 +24,7 @@ const state: State = {
 	waterTemp: null,
 	marineForecast: [],
 	connectionOnline: true,
-	selectedDayOffset: 0,
+	viewOffsetHours: 0,
 };
 
 const elements: Elements = {
@@ -118,20 +118,22 @@ window.addEventListener("DOMContentLoaded", () => {
 
 	if (isKiosk) {
 		document.body.classList.add("kiosk-mode");
-		startAutoTransitionTimer();
+		requestAnimationFrame(kioskSweepTick);
+	} else {
+		setupNavigationHandlers();
 	}
 
-	setupNavigationHandlers();
 	loadData();
 	setInterval(updateClock, 1000);
 	setInterval(loadData, 10 * 60 * 1000);
 });
 
-// How long each day's view is held before flipping to the other day.
-const DAY_HOLD_MS = 20000;
-// How long the slide/crossfade transition itself takes. Kept in sync with
-// the #scrollable-timeline and .nav-badge CSS transition durations.
+// How long the crossfade takes when the header date flips to the next day.
 const DAY_TRANSITION_MS = 2000;
+
+// One-way traversal time for the kiosk auto-scroll sweep across the full
+// 48h graph. Round trip (today -> tomorrow -> today) takes 2x this.
+const KIOSK_SWEEP_LEG_MS = 90000;
 
 // Fades an element out, swaps its content at the midpoint (while invisible),
 // then fades it back in, so text/list changes don't pop instantly while the
@@ -153,59 +155,79 @@ function crossfadeUpdate(
 	}, half);
 }
 
-function switchDay(nextOffset: number): void {
-	if (state.selectedDayOffset === nextOffset) return;
+// The calendar day (0 = today, 1 = tomorrow) that the center of the current
+// viewport falls on. The viewport is a 24h-wide window starting at
+// viewOffsetHours into the 48h graph, so its center sits 12h later - once
+// that crosses hour 24 of the graph, the window is showing more of tomorrow
+// than today and everything day-scoped (header date, astro icon) should
+// follow it there.
+function viewportDayOffset(hours: number): number {
+	return hours + 12 >= 24 ? 1 : 0;
+}
+
+// Applies a viewport position (0-24h into the 48h graph) to the timeline
+// transform, and flips over any day-scoped UI (header date, astro icon)
+// exactly when the viewport's center crosses the midnight boundary, rather
+// than on every call.
+let lastAppliedDayOffset = 0;
+function applyViewOffset(hours: number): void {
+	state.viewOffsetHours = hours;
+
 	const timeline = elements.scrollableTimeline;
-
-	// Update viewed offset
-	state.selectedDayOffset = nextOffset;
-
-	// Slide the timeline container horizontally
 	if (timeline) {
-		if (nextOffset === 0) {
-			timeline.style.transform = "translateX(0%)";
-		} else {
-			timeline.style.transform = "translateX(-50%)";
-		}
+		timeline.style.transform = `translateX(-${(hours / 24) * 50}%)`;
 	}
 
-	// Update badges active class
-	if (elements.badgeToday && elements.badgeTomorrow) {
-		if (nextOffset === 0) {
-			elements.badgeToday.classList.add("active");
-			elements.badgeTomorrow.classList.remove("active");
-		} else {
-			elements.badgeTomorrow.classList.add("active");
-			elements.badgeToday.classList.remove("active");
-		}
+	const dayOffset = viewportDayOffset(hours);
+	if (dayOffset !== lastAppliedDayOffset) {
+		lastAppliedDayOffset = dayOffset;
+		crossfadeUpdate(elements.digitalDate, updateDateHeader, DAY_TRANSITION_MS);
+		updateAstronomicalDetails(state, elements, dayOffset);
 	}
-
-	// Crossfade the date header in step with the slide
-	crossfadeUpdate(elements.digitalDate, updateDateHeader, DAY_TRANSITION_MS);
-
-	// Update astro details
-	updateAstronomicalDetails(state, elements);
 }
 
 function setupNavigationHandlers(): void {
 	if (elements.badgeToday) {
 		elements.badgeToday.addEventListener("click", () => {
-			switchDay(0);
+			applyViewOffset(0);
+			setActiveBadge(0);
 		});
 	}
 	if (elements.badgeTomorrow) {
 		elements.badgeTomorrow.addEventListener("click", () => {
-			switchDay(1);
+			applyViewOffset(24);
+			setActiveBadge(24);
 		});
 	}
 }
 
-function startAutoTransitionTimer(): void {
-	setInterval(() => {
-		const currentOffset = state.selectedDayOffset;
-		const nextOffset = currentOffset === 0 ? 1 : 0;
-		switchDay(nextOffset);
-	}, DAY_HOLD_MS);
+function setActiveBadge(hours: number): void {
+	if (!elements.badgeToday || !elements.badgeTomorrow) return;
+	if (hours === 0) {
+		elements.badgeToday.classList.add("active");
+		elements.badgeTomorrow.classList.remove("active");
+	} else {
+		elements.badgeTomorrow.classList.add("active");
+		elements.badgeToday.classList.remove("active");
+	}
+}
+
+function easeInOutSine(x: number): number {
+	return -(Math.cos(Math.PI * x) - 1) / 2;
+}
+
+// Drives the kiosk-mode auto-scroll: a slow, continuous ping-pong sweep
+// across the full 48h graph (today -> tomorrow -> today -> ...) so the
+// viewport is always smoothly in motion instead of holding on a day and
+// hard-cutting to the next.
+function kioskSweepTick(nowMs: number): void {
+	const cycle = nowMs % (KIOSK_SWEEP_LEG_MS * 2);
+	const goingForward = cycle < KIOSK_SWEEP_LEG_MS;
+	const leg = goingForward ? cycle : cycle - KIOSK_SWEEP_LEG_MS;
+	const progress = easeInOutSine(leg / KIOSK_SWEEP_LEG_MS);
+
+	applyViewOffset(goingForward ? progress * 24 : 24 - progress * 24);
+	requestAnimationFrame(kioskSweepTick);
 }
 
 // --- Data Fetching & Processing ---
@@ -273,7 +295,11 @@ function updateUI(): void {
 
 	drawTidelogGrid(elements);
 	renderForecast(state, elements);
-	updateAstronomicalDetails(state, elements);
+	updateAstronomicalDetails(
+		state,
+		elements,
+		viewportDayOffset(state.viewOffsetHours),
+	);
 	renderTidelogGraph(state, elements);
 	updateClock();
 }
@@ -297,7 +323,9 @@ function updateClockHeader(now: Date): void {
 function updateDateHeader(): void {
 	if (!elements.digitalDate) return;
 	const displayDate = new Date();
-	displayDate.setDate(displayDate.getDate() + state.selectedDayOffset);
+	displayDate.setDate(
+		displayDate.getDate() + viewportDayOffset(state.viewOffsetHours),
+	);
 	const options: Intl.DateTimeFormatOptions = {
 		weekday: "long",
 		month: "long",

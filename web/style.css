@@ -29,6 +29,20 @@ body.kiosk-mode, body.kiosk-mode * {
 	cursor: none !important;
 }
 
+/* Today/Tomorrow badges are a manual-navigation affordance for non-kiosk
+   viewing; the kiosk display auto-scrolls continuously instead. */
+body.kiosk-mode #day-navigation {
+	display: none;
+}
+
+/* Kiosk auto-scroll drives the transform every animation frame via JS, so
+   the badge-click slide transition must be disabled here - otherwise each
+   frame's instant transform update fights the in-flight 2s transition and
+   the sweep looks stair-stepped instead of smooth. */
+body.kiosk-mode #scrollable-timeline {
+	transition: none;
+}
+
 #app-wrapper {
 	width: 100%;
 	height: 100%;
