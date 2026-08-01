@@ -253,6 +253,21 @@ export function renderLunarTransit(
 	const scaleY = getSvgScaleY(svgEl);
 	const moonLineStartY = MOON_LINE_START_PX / scaleY;
 
+	// The moon icon's background is an ellipse, not a circle, because the svg
+	// stretches non-uniformly - inflate ry to match rx on screen (see the
+	// comment on getSvgAspectCorrection in utils.ts). The emoji glyph is SVG
+	// text, so it's squashed by the same non-uniform stretch - counter-scale
+	// it vertically (about its own center, since text-anchor/dominant-baseline
+	// already center it at the origin) so it renders round too.
+	elements.moonIndicatorCircle?.setAttribute(
+		"ry",
+		String(14 * aspectCorrection),
+	);
+	elements.moonIndicatorIcon?.setAttribute(
+		"transform",
+		`scale(1, ${aspectCorrection})`,
+	);
+
 	if (day1Astro) {
 		updateLunarMarkersDOM(
 			elements,

@@ -5,6 +5,42 @@ import requests
 import re
 from noaa_coops import Station
 
+
+def _get_live_reading(primary_station, fallback_station, is_subordinate, fallback_id, product, units, begin, end, **extra_kwargs):
+    """Fetch a live NOAA CO-OPS product's dataframe from the primary station,
+    falling back to the reference station if the primary (often a
+    subordinate, predictions-only station) doesn't report it."""
+    try:
+        return primary_station.get_data(
+            begin_date=begin, end_date=end, product=product,
+            units=units, time_zone="lst_ldt", **extra_kwargs
+        )
+    except Exception as e:
+        if is_subordinate:
+            print(f"Scraper: {product} not available for subordinate station. Falling back to reference station {fallback_id}...")
+            return fallback_station.get_data(
+                begin_date=begin, end_date=end, product=product,
+                units=units, time_zone="lst_ldt", **extra_kwargs
+            )
+        raise
+
+
+def fetch_latest_scalar(primary_station, fallback_station, is_subordinate, fallback_id, product, units, begin, end, decimals=1, **extra_kwargs):
+    """Latest reading for a single-value live product (water temperature,
+    observed water level)."""
+    try:
+        df = _get_live_reading(primary_station, fallback_station, is_subordinate, fallback_id, product, units, begin, end, **extra_kwargs)
+        if df.empty:
+            return None
+        valid = df["v"].dropna()
+        if valid.empty:
+            return None
+        return round(float(valid.iloc[-1]), decimals)
+    except Exception as e:
+        print(f"Scraper: Warning: failed to fetch {product}: {e}")
+        return None
+
+
 def fetch_tide_data(station_id, units, datum, config_path=None):
     # Find the web output directory relative to this package script location
     # script: src/tide_clock/scraper.py -> web_dir: src/../web
@@ -257,39 +293,21 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
 
 
 
-    # Fetch water temperature (latest reading)
-    water_temp = None
-    try:
-        temp_begin = (now - datetime.timedelta(days=1)).strftime("%Y%m%d")
-        temp_end = now.strftime("%Y%m%d")
-        temp_station = station
-        try:
-            df_temp = temp_station.get_data(
-                begin_date=temp_begin,
-                end_date=temp_end,
-                product="water_temperature",
-                units=units,
-                time_zone="lst_ldt"
-            )
-        except Exception as e:
-            if is_subordinate:
-                print(f"Scraper: Water temp not available for subordinate station. Falling back to reference station {ref_station_id}...")
-                temp_station = ref_station
-                df_temp = temp_station.get_data(
-                    begin_date=temp_begin,
-                    end_date=temp_end,
-                    product="water_temperature",
-                    units=units,
-                    time_zone="lst_ldt"
-                )
-            else:
-                raise e
-        if not df_temp.empty:
-            valid_temps = df_temp["v"].dropna()
-            if not valid_temps.empty:
-                water_temp = round(float(valid_temps.iloc[-1]), 1)
-    except Exception as e:
-        print(f"Scraper: Warning: failed to fetch water temperature: {e}")
+    # Fetch live water temperature. This comes from a real sensor, so a
+    # subordinate (predictions-only) station falls back to its reference
+    # station - see fetch_latest_scalar.
+    # end_date is a bare YYYYMMDD (no time-of-day), which the CO-OPS API
+    # treats as the *start* of that day - passing today's date as end_date
+    # would cut the range off at today 00:00 and silently return yesterday's
+    # last reading as "latest". Extend end_date one day past today so the
+    # range fully covers up through right now.
+    temp_begin = (now - datetime.timedelta(days=1)).strftime("%Y%m%d")
+    temp_end = (now + datetime.timedelta(days=1)).strftime("%Y%m%d")
+
+    water_temp = fetch_latest_scalar(
+        station, ref_station, is_subordinate, ref_station_id,
+        "water_temperature", units, temp_begin, temp_end,
+    )
 
     # Fetch NWS Coastal Waters Forecast for Casco Bay
 

@@ -182,6 +182,13 @@ body.kiosk-mode #scrollable-timeline {
 	letter-spacing: 1px;
 }
 
+#water-temp-val {
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: var(--text-muted);
+	letter-spacing: 1px;
+}
+
 /* Layout Content Section */
 #tidelog-content {
 	flex-grow: 1;
@@ -390,17 +397,17 @@ body.kiosk-mode #scrollable-timeline {
 }
 
 .astro-callout.moon .astro-title {
-	color: #64748b;
+	color: var(--text-muted);
 	font-size: 0.65rem;
-	font-weight: 400;
-	opacity: 0.7;
+	font-weight: 500;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .astro-callout.moon .astro-time {
-	color: #64748b;
+	color: var(--text-muted);
 	font-size: 0.75rem;
 	font-weight: 600;
-	opacity: 0.85;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* NOW Marker Overlay Elements */

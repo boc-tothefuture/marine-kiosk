@@ -38,6 +38,8 @@ const elements: Elements = {
 	weatherTimelineBar: document.getElementById("weather-timeline-bar"),
 	tidelogContent: document.getElementById("tidelog-content"),
 
+	waterTempVal: document.getElementById("water-temp-val"),
+
 	badgeToday: document.getElementById("badge-today"),
 	badgeTomorrow: document.getElementById("badge-tomorrow"),
 
@@ -64,6 +66,9 @@ const elements: Elements = {
 	moonIndicatorGroup: document.getElementById(
 		"moon-indicator-group",
 	) as SVGElement | null,
+	moonIndicatorCircle: document.getElementById(
+		"moon-indicator-circle",
+	) as SVGEllipseElement | null,
 	moonIndicatorIcon: document.getElementById(
 		"moon-indicator-icon",
 	) as SVGTextElement | null,
@@ -269,7 +274,7 @@ function processTideData(data: any): void {
 
 	state.units = data.units || "english";
 	state.datum = data.datum || "MLLW";
-	state.waterTemp = data.water_temp;
+	state.waterTemp = data.water_temp ?? null;
 	state.marineForecast = data.marine_forecast || [];
 	state.astronomical_data = data.astronomical_data || {};
 	state.lastUpdated = data.last_updated;
@@ -293,6 +298,7 @@ function updateUI(): void {
 		elements.lastUpdatedText.textContent = `UPDATED: ${updatedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 	}
 
+	updateWaterTemp();
 	drawTidelogGrid(elements);
 	renderForecast(state, elements);
 	updateAstronomicalDetails(
@@ -302,6 +308,15 @@ function updateUI(): void {
 	);
 	renderTidelogGraph(state, elements);
 	updateClock();
+}
+
+function updateWaterTemp(): void {
+	if (!elements.waterTempVal) return;
+	const tempUnit = state.units === "english" ? "°F" : "°C";
+	elements.waterTempVal.textContent =
+		state.waterTemp !== null
+			? `WATER ${state.waterTemp}${tempUnit}`
+			: "WATER --";
 }
 
 function updateClock(): void {

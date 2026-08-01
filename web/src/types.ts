@@ -67,6 +67,8 @@ export interface Elements {
 	currentStatusVal: HTMLElement | null;
 	weatherTimelineBar: HTMLElement | null;
 
+	waterTempVal: HTMLElement | null;
+
 	badgeToday: HTMLElement | null;
 	badgeTomorrow: HTMLElement | null;
 
@@ -81,6 +83,7 @@ export interface Elements {
 	sunStrokePath: SVGPathElement | null;
 	lunarTransitPath: SVGPathElement | null;
 	moonIndicatorGroup: SVGElement | null;
+	moonIndicatorCircle: SVGEllipseElement | null;
 	moonIndicatorIcon: SVGTextElement | null;
 	nowMarkerLine: SVGLineElement | null;
 	nowMarkerDot: HTMLElement | null;
