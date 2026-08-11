@@ -1,6 +1,8 @@
 import http.server
 import os
+
 from . import __version__
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -16,7 +18,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
-            version_bytes = f"{__version__}\n".encode("utf-8")
+            version_bytes = f"{__version__}\n".encode()
             self.send_header("Content-Length", str(len(version_bytes)))
             self.end_headers()
             self.wfile.write(version_bytes)

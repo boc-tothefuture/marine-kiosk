@@ -1,11 +1,12 @@
-import os
+import argparse
 import json
-import sys
+import os
 import threading
 import time
-import argparse
+
 from .scraper import fetch_tide_data
 from .server import start_server
+
 
 def load_config(config_path=None):
     if config_path is None:
@@ -30,7 +31,7 @@ def load_config(config_path=None):
                 config = json.load(f)
                 # Merge with defaults to ensure all keys exist
                 return {**default_config, **config}
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             print(f"Error loading {config_path}, using defaults: {e}")
             return default_config
     else:
@@ -39,7 +40,7 @@ def load_config(config_path=None):
             with open(config_path, "w") as f:
                 json.dump(default_config, f, indent=2)
             print(f"Created default configuration at {config_path}")
-        except Exception as e:
+        except OSError as e:
             print(f"Failed to create default config file at {config_path}: {e}")
         return default_config
 
@@ -52,7 +53,7 @@ def scraper_worker(station_id, units, datum, interval_hours, config_path=None):
             fetch_tide_data(station_id, units, datum, config_path=config_path)
             retry_delay_sec = 60
             time.sleep(interval_hours * 3600)
-        except Exception as e:
+        except (OSError, ValueError, KeyError, json.JSONDecodeError, RuntimeError, AttributeError, TypeError) as e:
             print(f"Scraper Worker Error: Scraper failed to fetch data: {e}. Retrying in {retry_delay_sec}s...")
             time.sleep(retry_delay_sec)
             retry_delay_sec = min(retry_delay_sec * 2, max_retry_delay_sec)

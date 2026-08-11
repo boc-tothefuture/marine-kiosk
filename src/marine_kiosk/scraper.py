@@ -1,8 +1,9 @@
-import os
-import json
 import datetime
-import requests
+import json
+import os
 import re
+
+import requests
 from noaa_coops import Station
 
 
@@ -15,7 +16,7 @@ def _get_live_reading(primary_station, fallback_station, is_subordinate, fallbac
             begin_date=begin, end_date=end, product=product,
             units=units, time_zone="lst_ldt", **extra_kwargs
         )
-    except Exception as e:
+    except (requests.RequestException, ValueError, KeyError, AttributeError, TypeError, IndexError):
         if is_subordinate:
             print(f"Scraper: {product} not available for subordinate station. Falling back to reference station {fallback_id}...")
             return fallback_station.get_data(
@@ -36,7 +37,7 @@ def fetch_latest_scalar(primary_station, fallback_station, is_subordinate, fallb
         if valid.empty:
             return None
         return round(float(valid.iloc[-1]), decimals)
-    except Exception as e:
+    except (requests.RequestException, ValueError, KeyError, AttributeError, TypeError, IndexError) as e:
         print(f"Scraper: Warning: failed to fetch {product}: {e}")
         return None
 
@@ -61,7 +62,7 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 cfg = json.load(f)
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         print(f"Scraper: Warning: failed to load config at startup: {e}")
 
     astral_lat = cfg.get("astral_latitude")
@@ -71,7 +72,8 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     nws_office = cfg.get("nws_office", "GYX")
     nws_zone = cfg.get("nws_zone", "ANZ153")
 
-    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Scraping station {station_id} ({units}, {datum})...")
+    now = datetime.datetime.now().astimezone()
+    print(f"[{now.strftime('%H:%M:%S')}] Scraping station {station_id} ({units}, {datum})...")
     
     station = Station(id=station_id)
     raw_station_name = getattr(station, "name", f"Station {station_id}")
@@ -82,10 +84,10 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     # Check if this is a subordinate station using NOAA Metadata API
     ref_station_id = station_id
     is_subordinate = False
-    time_offset_high = 0
-    time_offset_low = 0
-    height_offset_high = 0.0
-    height_offset_low = 0.0
+    time_offset_high: int = 0
+    time_offset_low: int = 0
+    height_offset_high: float = 0.0
+    height_offset_low: float = 0.0
     height_adj_type = "R"
     
     try:
@@ -95,25 +97,26 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
             offsets_data = res_offsets.json()
             parent_ref = offsets_data.get("refStationId")
             if parent_ref:
-                ref_station_id = parent_ref
+                ref_station_id = str(parent_ref)
                 is_subordinate = True
-                time_offset_high = offsets_data.get("timeOffsetHighTide") or 0
-                time_offset_low = offsets_data.get("timeOffsetLowTide") or 0
-                height_adj_type = offsets_data.get("heightAdjustedType") or "R"
+                time_offset_high = int(offsets_data.get("timeOffsetHighTide") or 0)
+                time_offset_low = int(offsets_data.get("timeOffsetLowTide") or 0)
+                height_adj_type = str(offsets_data.get("heightAdjustedType") or "R")
                 
                 default_h_high = 1.0 if height_adj_type == "R" else 0.0
                 default_h_low = 1.0 if height_adj_type == "R" else 0.0
                 
-                height_offset_high = offsets_data.get("heightOffsetHighTide")
-                if height_offset_high is None:
-                    height_offset_high = default_h_high
-                height_offset_low = offsets_data.get("heightOffsetLowTide")
-                if height_offset_low is None:
-                    height_offset_low = default_h_low
+                raw_h_high = offsets_data.get("heightOffsetHighTide")
+                height_offset_high = float(raw_h_high) if raw_h_high is not None else default_h_high
+                raw_h_low = offsets_data.get("heightOffsetLowTide")
+                height_offset_low = float(raw_h_low) if raw_h_low is not None else default_h_low
                     
-                print(f"Scraper: Detected subordinate station {station_id}. Using reference station {ref_station_id} with offsets: "
-                      f"time high={time_offset_high}m, low={time_offset_low}m, height type={height_adj_type}, high={height_offset_high}, low={height_offset_low}")
-    except Exception as e:
+                print(
+                    f"Scraper: Detected subordinate station {station_id}. Using reference station {ref_station_id} with offsets: "
+                    f"time high={time_offset_high}m, low={time_offset_low}m, height type={height_adj_type}, "
+                    f"high={height_offset_high}, low={height_offset_low}"
+                )
+    except (requests.RequestException, json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
         print(f"Scraper: Warning: failed to fetch tide offsets for station {station_id}: {e}")
 
     if is_subordinate:
@@ -122,7 +125,6 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
         ref_station = station
 
     # Fetch 3 days of predictions (yesterday, today, tomorrow) to support three tide cycles display
-    now = datetime.datetime.now()
     begin_date = (now - datetime.timedelta(days=1)).strftime("%Y%m%d")
     end_date = (now + datetime.timedelta(days=2)).strftime("%Y%m%d")
     
@@ -141,8 +143,10 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
     tide_heights = []
     for dt, row in df_hourly.iterrows():
         val = row["v"]
+        iso_fn = getattr(dt, "isoformat", None)
+        dt_str = str(iso_fn()) if callable(iso_fn) else str(dt)
         tide_heights.append({
-            "time": dt.isoformat(),
+            "time": dt_str,
             "value": round(val, 3)
         })
 
@@ -159,12 +163,14 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
             interval="hilo"
         )
         for dt, row in df_hilo.iterrows():
+            iso_fn = getattr(dt, "isoformat", None)
+            dt_str = str(iso_fn()) if callable(iso_fn) else str(dt)
             tide_extremes.append({
-                "time": dt.isoformat(),
+                "time": dt_str,
                 "value": round(float(row["v"]), 3),
-                "type": str(row["type"]) # 'H' or 'L'
+                "type": str(row["type"])  # 'H' or 'L'
             })
-    except Exception as e:
+    except (requests.RequestException, ValueError, KeyError, AttributeError, TypeError, IndexError) as e:
         print(f"Scraper: Warning: failed to fetch exact tide extremes: {e}")
 
     # Apply subordinate adjustments if active
@@ -205,6 +211,8 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
         for pt in tide_heights:
             pt_time = datetime.datetime.fromisoformat(pt["time"])
             val = pt["value"]
+            adjusted_time = pt_time
+            adjusted_val = val
             
             if tide_extremes_parsed:
                 # Find closest previous and next extremes in the adjusted extremes list
@@ -220,17 +228,18 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                 if prev_ext is None and next_ext is None:
                     adjusted_val = val
                     adjusted_time = pt_time
-                elif prev_ext is None:
+                elif prev_ext is None and next_ext is not None:
                     t_off = time_offset_high if next_ext["type"] == "H" else time_offset_low
                     h_off = height_offset_high if next_ext["type"] == "H" else height_offset_low
                     adjusted_time = pt_time + datetime.timedelta(minutes=t_off)
                     adjusted_val = val * h_off if height_adj_type == "R" else val + h_off
-                elif next_ext is None:
+                elif next_ext is None and prev_ext is not None:
                     t_off = time_offset_high if prev_ext["type"] == "H" else time_offset_low
                     h_off = height_offset_high if prev_ext["type"] == "H" else height_offset_low
                     adjusted_time = pt_time + datetime.timedelta(minutes=t_off)
                     adjusted_val = val * h_off if height_adj_type == "R" else val + h_off
                 else:
+                    assert prev_ext is not None and next_ext is not None
                     t_prev = prev_ext["time"]
                     t_next = next_ext["time"]
                     total_sec = (t_next - t_prev).total_seconds()
@@ -252,9 +261,6 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                         adjusted_val = val * int_h_off
                     else:
                         adjusted_val = val + int_h_off
-            else:
-                adjusted_time = pt_time
-                adjusted_val = val
                 
             adjusted_heights.append({
                 "time": adjusted_time.isoformat(),
@@ -282,7 +288,7 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                         "time": item["Time"].replace(" ", "T"),
                         "value": round(float(item["Velocity_Major"]), 2)
                     })
-    except Exception as e:
+    except (requests.RequestException, json.JSONDecodeError, KeyError, ValueError, TypeError, IndexError) as e:
         print(f"Scraper: Warning: failed to fetch predicted currents: {e}")
 
     # Determine station's local current day by applying metadata timezone offset to UTC
@@ -352,15 +358,15 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                         print(f"Scraper: Warning: could not find NWS zone segment for {nws_zone}")
         else:
             print(f"Scraper: Warning: failed to fetch NWS CWF product list: {res_list.status_code}")
-    except Exception as e:
+    except (requests.RequestException, json.JSONDecodeError, KeyError, ValueError, TypeError, IndexError) as e:
         print(f"Scraper: Warning: failed to fetch NWS marine forecast: {e}")
 
     # Calculate highly accurate sunrise, sunset, moonrise, moonset using astral
     astronomical_data = {}
     try:
         from astral import Observer
-        from astral.sun import sun
         from astral.moon import moonrise, moonset, phase
+        from astral.sun import sun
 
         # Use configured coordinates if defined, otherwise fallback to station metadata coordinates
         lat = float(astral_lat if astral_lat is not None else station.metadata.get("lat", 43.658))
@@ -384,7 +390,7 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                 s = sun(observer, check_date, tzinfo=tz)
                 sunrise_str = s["sunrise"].isoformat()
                 sunset_str = s["sunset"].isoformat()
-            except Exception as e:
+            except (ValueError, TypeError, KeyError, AttributeError) as e:
                 print(f"Scraper: Sun calculation failed for {date_key}: {e}")
 
             # Moonrise
@@ -393,8 +399,8 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                 mr = moonrise(observer, check_date, tz)
                 if mr:
                     moonrise_str = mr.isoformat()
-            except Exception as e:
-                pass
+            except (ValueError, TypeError, AttributeError):
+                moonrise_str = None
 
             # Moonset
             moonset_str = None
@@ -402,8 +408,8 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                 ms = moonset(observer, check_date, tz)
                 if ms:
                     moonset_str = ms.isoformat()
-            except Exception as e:
-                pass
+            except (ValueError, TypeError, AttributeError):
+                moonset_str = None
 
             # Moon Phase
             p_val = 0.0
@@ -427,8 +433,8 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                     p_name, p_symbol = "Last Quarter", "🌗"
                 else:
                     p_name, p_symbol = "Waning Crescent", "🌘"
-            except Exception as e:
-                pass
+            except (ValueError, TypeError, AttributeError):
+                p_val = 0.0
 
             astronomical_data[date_key] = {
                 "sunrise": sunrise_str,
@@ -439,7 +445,7 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                 "moon_phase_name": p_name,
                 "moon_phase_symbol": p_symbol
             }
-    except Exception as e:
+    except (ImportError, ValueError, TypeError, KeyError, AttributeError) as e:
         print(f"Scraper: Failed to compute astronomical data: {e}")
 
     output_data = {
