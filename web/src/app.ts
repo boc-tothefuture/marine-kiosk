@@ -1,3 +1,4 @@
+import { formatDistanceToNow } from "date-fns";
 import { updateAstronomicalDetails } from "./renderers/astro";
 import { drawTidelogGrid, renderTidelogGraph } from "./renderers/tideGraph";
 import { renderForecast } from "./renderers/weather";
@@ -293,11 +294,7 @@ function updateUI(): void {
 		elements.currentTideUnit.textContent =
 			state.units === "english" ? "FT" : "M";
 
-	if (state.lastUpdated && elements.lastUpdatedText) {
-		const updatedDate = new Date(state.lastUpdated);
-		elements.lastUpdatedText.textContent = `UPDATED: ${updatedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-	}
-
+	updateLastUpdatedDisplay();
 	updateWaterTemp();
 	drawTidelogGrid(elements);
 	renderForecast(state, elements);
@@ -308,6 +305,24 @@ function updateUI(): void {
 	);
 	renderTidelogGraph(state, elements);
 	updateClock();
+}
+
+function updateLastUpdatedDisplay(now: Date = new Date()): void {
+	if (!state.lastUpdated || !elements.lastUpdatedText) return;
+	const updatedDate = new Date(state.lastUpdated);
+	if (Number.isNaN(updatedDate.getTime())) return;
+
+	const timeAgo = formatDistanceToNow(updatedDate, { addSuffix: true });
+	elements.lastUpdatedText.textContent = `UPDATED: ${timeAgo.toUpperCase()}`;
+
+	// Normal updates happen hourly; flag red if past 75 minutes
+	const diffMs = now.getTime() - updatedDate.getTime();
+	const isStale = diffMs > 75 * 60 * 1000;
+	if (isStale) {
+		elements.lastUpdatedText.classList.add("stale");
+	} else {
+		elements.lastUpdatedText.classList.remove("stale");
+	}
 }
 
 function updateWaterTemp(): void {
@@ -324,6 +339,7 @@ function updateClock(): void {
 	updateClockHeader(now);
 	updateDateHeader();
 	updateNowTracker(now);
+	updateLastUpdatedDisplay(now);
 }
 
 function updateClockHeader(now: Date): void {

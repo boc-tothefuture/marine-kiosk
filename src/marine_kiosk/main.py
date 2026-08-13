@@ -4,6 +4,9 @@ import os
 import threading
 import time
 
+import requests
+from noaa_coops.station import COOPSAPIError
+
 from .scraper import fetch_tide_data
 from .server import start_server
 
@@ -53,8 +56,12 @@ def scraper_worker(station_id, units, datum, interval_hours, config_path=None):
             fetch_tide_data(station_id, units, datum, config_path=config_path)
             retry_delay_sec = 60
             time.sleep(interval_hours * 3600)
-        except (OSError, ValueError, KeyError, json.JSONDecodeError, RuntimeError, AttributeError, TypeError) as e:
+        except (requests.RequestException, COOPSAPIError, OSError, ValueError, KeyError, json.JSONDecodeError, RuntimeError, AttributeError, TypeError, IndexError) as e:
             print(f"Scraper Worker Error: Scraper failed to fetch data: {e}. Retrying in {retry_delay_sec}s...")
+            time.sleep(retry_delay_sec)
+            retry_delay_sec = min(retry_delay_sec * 2, max_retry_delay_sec)
+        except Exception as e:  # noqa: BLE001
+            print(f"Scraper Worker Unexpected Error: {e}. Retrying in {retry_delay_sec}s...")
             time.sleep(retry_delay_sec)
             retry_delay_sec = min(retry_delay_sec * 2, max_retry_delay_sec)
 

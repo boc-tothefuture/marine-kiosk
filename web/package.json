@@ -13,5 +13,8 @@
     "@biomejs/biome": "^2.5.3",
     "esbuild": "^0.23.0",
     "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "date-fns": "^4.4.0"
   }
 }

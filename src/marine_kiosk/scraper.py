@@ -4,7 +4,7 @@ import os
 import re
 
 import requests
-from noaa_coops import Station
+from noaa_coops.station import COOPSAPIError, Station
 
 
 def _get_live_reading(primary_station, fallback_station, is_subordinate, fallback_id, product, units, begin, end, **extra_kwargs):
@@ -16,9 +16,9 @@ def _get_live_reading(primary_station, fallback_station, is_subordinate, fallbac
             begin_date=begin, end_date=end, product=product,
             units=units, time_zone="lst_ldt", **extra_kwargs
         )
-    except (requests.RequestException, ValueError, KeyError, AttributeError, TypeError, IndexError):
+    except (requests.RequestException, COOPSAPIError, ValueError, KeyError, AttributeError, TypeError, IndexError) as e:
         if is_subordinate:
-            print(f"Scraper: {product} not available for subordinate station. Falling back to reference station {fallback_id}...")
+            print(f"Scraper: {product} not available for subordinate station ({e}). Falling back to reference station {fallback_id}...")
             return fallback_station.get_data(
                 begin_date=begin, end_date=end, product=product,
                 units=units, time_zone="lst_ldt", **extra_kwargs
@@ -37,7 +37,7 @@ def fetch_latest_scalar(primary_station, fallback_station, is_subordinate, fallb
         if valid.empty:
             return None
         return round(float(valid.iloc[-1]), decimals)
-    except (requests.RequestException, ValueError, KeyError, AttributeError, TypeError, IndexError) as e:
+    except (requests.RequestException, COOPSAPIError, ValueError, KeyError, AttributeError, TypeError, IndexError) as e:
         print(f"Scraper: Warning: failed to fetch {product}: {e}")
         return None
 
@@ -170,7 +170,7 @@ def fetch_tide_data(station_id, units, datum, config_path=None):
                 "value": round(float(row["v"]), 3),
                 "type": str(row["type"])  # 'H' or 'L'
             })
-    except (requests.RequestException, ValueError, KeyError, AttributeError, TypeError, IndexError) as e:
+    except (requests.RequestException, COOPSAPIError, ValueError, KeyError, AttributeError, TypeError, IndexError) as e:
         print(f"Scraper: Warning: failed to fetch exact tide extremes: {e}")
 
     # Apply subordinate adjustments if active

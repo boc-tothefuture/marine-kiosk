@@ -666,6 +666,12 @@ body.kiosk-mode #scrollable-timeline {
 	letter-spacing: 1px;
 }
 
+#last-updated-text.stale {
+	color: #f43f5e;
+	font-weight: 600;
+	text-shadow: 0 0 10px rgba(244, 63, 94, 0.45);
+}
+
 /* Weather Timeline Styling */
 #weather-timeline-bar {
 	width: 100%;
